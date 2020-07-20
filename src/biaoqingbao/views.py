@@ -24,7 +24,7 @@ resp: 200, body:
             "url": [String],
             "type": [String],
             "tags": [Array[Object]], // {"id": 1, "text": "xxx"}
-            "group": [String] or null, // {"id": 1, "name": "xxx"}
+            "group_id": [Number] or null,
             "create_at": [String]
         },
         ...
@@ -71,10 +71,7 @@ def show_images():
             'url': f'/api/images/{record.id}',
             'type': record.type,
             'tags': [{'id': t.id, 'text': t.text} for t in record.tags],
-            'group': {
-                'id': record.group.id,
-                'name': record.group.name,
-            } if record.group else None
+            'group_id': record.group_id,
         }
             for record in paginate.items
     ]
