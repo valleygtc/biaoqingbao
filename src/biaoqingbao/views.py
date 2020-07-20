@@ -334,7 +334,7 @@ def show_groups():
 POST {
     "name": [String],
 }
-resp: 200, body: {"msg": [String]}
+resp: 200, body: {"id": [int]}
 """
 @bp_main.route('/api/groups/add', methods=['POST'])
 def add_group():
@@ -344,7 +344,7 @@ def add_group():
     db.session.add(record)
     db.session.commit()
     return jsonify({
-        'msg': f'成功添加组：{record}'
+        'id': record.id,
     })
 
 

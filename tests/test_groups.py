@@ -69,7 +69,7 @@ class TestAddGroup(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
-        self.assertIn('msg', json_data)
+        self.assertIn('id', json_data)
         # 验证已插入数据库
         with test_app.app_context():
             self.assertTrue(Group.query.get(1))
