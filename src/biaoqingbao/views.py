@@ -21,6 +21,7 @@ resp: 200, body:
     "data": [
         {
             "id": [Number],
+            "url": [String],
             "type": [String],
             "tags": [Array[Object]], // {"id": 1, "text": "xxx"}
             "group": [String] or null, // {"id": 1, "name": "xxx"}
@@ -67,6 +68,7 @@ def show_images():
     data = [
         {
             'id': record.id,
+            'url': f'/api/images/{record.id}',
             'type': record.type,
             'tags': [{'id': t.id, 'text': t.text} for t in record.tags],
             'group': {
