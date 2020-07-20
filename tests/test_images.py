@@ -150,7 +150,7 @@ class TestSearchImage(unittest.TestCase):
         client = test_app.test_client()
         resp = client.get(
             self.url,
-            query_string={'group': 'testGroup'}
+            query_string={'groupId': 1}
         )
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
@@ -162,7 +162,7 @@ class TestSearchImage(unittest.TestCase):
         resp = client.get(
             self.url,
             query_string={
-                'group': 'testGroup',
+                'groupId': 1,
                 'tag': 'aTag',
             }
         )

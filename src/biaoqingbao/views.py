@@ -11,7 +11,7 @@ bp_main = Blueprint('bp_main', __name__)
 GET
 搜索：后端实现，使用 url 参数，可搜索项：tag。
 - tag: [str]
-- group: [str]
+- groupId: [int]
 分页：后端实现，使用url参数?page=[int]&per_page=[int]
 - page: 可选，默认为 1。
 - per_page：可选，默认为 20。
@@ -40,18 +40,18 @@ resp: 200, body:
 @bp_main.route('/api/images/', methods=['GET'])
 def show_images():
     # apply search
-    group = request.args.get('group')
+    groupId = request.args.get('groupId')
     tag = request.args.get('tag')
-    if group and tag:
+    if groupId and tag:
         query = Image.query\
             .join(Image.group)\
             .join(Image.tags)\
-            .filter(Group.name == group)\
+            .filter(Group.id == groupId)\
             .filter(Tag.text.contains(tag))
-    elif group:
+    elif groupId:
         query = Image.query\
             .join(Image.group)\
-            .filter(Group.name == group)
+            .filter(Group.id == groupId)
     elif tag:
         query = Image.query\
             .join(Image.tags)\
