@@ -268,7 +268,7 @@ resp: 200, body: {"msg": [String]}
 def delete_tag():
     data = request.get_json()
     tag_id = data['id']
-    tag = Image.query.get(tag_id)
+    tag = Tag.query.get(tag_id)
     if tag is None:
         err = f'标签（id={tag_id}）不存在，可能是其已被删除，请刷新页面。'
         return jsonify({
