@@ -345,26 +345,27 @@ def add_group():
 
 """/groups/delete
 POST {
-    "id": [Number],
+    "ids": [Array[Number]],
 }
 resp: 200, body: {"msg": [String]}
 """
 @bp_main.route('/api/groups/delete', methods=['POST'])
 def delete_group():
     data = request.get_json()
-    group_id = data['id']
-    group = Group.query.get(group_id)
-    if group is None:
-        err = f'组（id={group_id}）不存在，可能是其已被删除，请刷新页面。'
-        return jsonify({
-            'error': err
-        }), 404
-    else:
-        db.session.delete(group)
-        db.session.commit()
-        return jsonify({
-            'msg': f'成功删除组（id={group_id}）'
-        })
+    group_ids = data['ids']
+    for id in group_ids:
+        group = Group.query.get(id)
+        if group:
+            db.session.delete(group)
+        else:
+            err = f'组（id={id}）不存在，可能是其已被删除，请刷新页面。'
+            return jsonify({
+                'error': err
+            }), 404
+    db.session.commit()
+    return jsonify({
+        'msg': f'成功删除组（ids={group_ids}）'
+    })
 
 
 """/groups/update

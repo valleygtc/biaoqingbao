@@ -81,7 +81,7 @@ class TestDeleteGroup(unittest.TestCase):
     def setUp(self):
         with test_app.app_context():
             db.create_all()
-            fake_records(1)
+            fake_records(2)
     
     def tearDown(self):
         with test_app.app_context():
@@ -91,7 +91,7 @@ class TestDeleteGroup(unittest.TestCase):
         client = test_app.test_client()
         resp = client.post(
             self.url,
-            json={'id': 1}
+            json={'ids': [1, 2]}
         )
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
@@ -102,12 +102,16 @@ class TestDeleteGroup(unittest.TestCase):
             # 验证 cascade delete：
             self.assertFalse(Image.query.get(1))
             self.assertFalse(Image.query.get(2))
+            self.assertFalse(Group.query.get(2))
+            # 验证 cascade delete：
+            self.assertFalse(Image.query.get(3))
+            self.assertFalse(Image.query.get(4))
     
     def test_delete_not_exists_group(self):
         client = test_app.test_client()
         resp = client.post(
             self.url,
-            json={'id': 10000}
+            json={'ids': [10000]}
         )
         self.assertEqual(resp.status_code, 404)
         json_data = resp.get_json()
