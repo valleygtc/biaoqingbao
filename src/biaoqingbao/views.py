@@ -234,9 +234,9 @@ def show_tags():
 """/tags/add
 POST {
     "image_id": [Number],
-    "tags": [Array[String]]
+    "text": [String]
 }
-resp: 200, body: {"msg": [String]}
+resp: 200, body: {"id": [Number]}
 """
 @bp_main.route('/api/tags/add', methods=['POST'])
 def add_tags():
@@ -249,14 +249,12 @@ def add_tags():
             'error': err
         }), 404
     
-    for t in data['tags']:
-        record = Tag(text=t)
-        record.image_id=image_id
-        db.session.add(record)
-
+    record = Tag(text=data['text'])
+    record.image_id=image_id
+    db.session.add(record)
     db.session.commit()
     return jsonify({
-        'msg': f'成功添加为图片（id={image_id}）添加标签：{data["tags"]}'
+        'id': record.id,
     })
 
 

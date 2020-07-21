@@ -53,7 +53,7 @@ class TestAddTags(unittest.TestCase):
 
     data = {
         'image_id': 1,
-        'tags': ['addedTag1', 'addedTag2']
+        'text': 'addedTag1'
     }
 
     def setUp(self):
@@ -71,13 +71,12 @@ class TestAddTags(unittest.TestCase):
         resp = client.post(self.url, json=body)
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
-        self.assertIn('msg', json_data)
+        self.assertIn('id', json_data)
         # 验证已插入数据库
         with test_app.app_context():
-            image = Image.query.get(1)
-            tags = (t.text for t in image.tags)
-            self.assertIn('addedTag1', tags)
-            self.assertIn('addedTag2', tags)
+            tag = Tag.query.get(json_data['id'])
+            self.assertIsNotNone(tag)
+            self.assertEqual(tag.text, 'addedTag1')
 
 
 class TestDeleteTag(unittest.TestCase):
