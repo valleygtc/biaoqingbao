@@ -145,7 +145,7 @@ POST {
 }
 resp: 200, body: {"msg": [String]}
 """
-@bp_main.route('/api/images/delete', methods=['GET'])
+@bp_main.route('/api/images/delete', methods=['POST'])
 def delete_image():
     data = request.get_json()
     image_id = data['id']

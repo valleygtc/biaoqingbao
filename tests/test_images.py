@@ -270,7 +270,7 @@ class TestDeleteImage(unittest.TestCase):
 
     def test_normal(self):
         client = test_app.test_client()
-        resp = client.get(
+        resp = client.post(
             self.url,
             json={'id': 1}
         )
@@ -283,7 +283,7 @@ class TestDeleteImage(unittest.TestCase):
     
     def test_delete_not_exists_image(self):
         client = test_app.test_client()
-        resp = client.get(
+        resp = client.post(
             self.url,
             json={'id': 10000}
         )
