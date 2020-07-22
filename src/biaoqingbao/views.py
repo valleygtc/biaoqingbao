@@ -1,4 +1,8 @@
-from flask import Blueprint, json, jsonify, request, Response
+import io
+import zipfile
+from uuid import uuid4
+
+from flask import Blueprint, json, jsonify, request, Response, send_file
 
 from . import db
 from .models import Image, Group, Tag
@@ -386,3 +390,22 @@ def update_group():
     return jsonify({
         'msg': f'成功更新组：{group}'
     })
+
+
+"""
+GET
+resp: 200, body: serve export.zip file.
+"""
+@bp_main.route('/api/images/export')
+def export_images():
+    buffer = io.BytesIO()
+    images = Image.query.all()
+    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as fh:
+        for image in images:
+            fileinfo = zipfile.ZipInfo(
+                filename=f'{uuid4()}.{image.type}',
+                date_time=image.create_at.timetuple()[:6],
+            )
+            fh.writestr(fileinfo, image.data)
+    buffer.seek(0)
+    return send_file(buffer, as_attachment=True, attachment_filename='export.zip')

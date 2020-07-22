@@ -355,3 +355,21 @@ class TestUpdateImage(unittest.TestCase):
                 Image.query.get(2).group_id,
                 None,
             )
+
+
+class TestExportImages(unittest.TestCase):
+    url = '/api/images/export'
+
+    def setUp(self):
+        with test_app.app_context():
+            db.create_all()
+            fake_images(20)
+    
+    def tearDown(self):
+        with test_app.app_context():
+            db.drop_all()
+
+    def test_default(self):
+        client = test_app.test_client()
+        resp = client.get(self.url)
+        self.assertEqual(resp.status_code, 200)
