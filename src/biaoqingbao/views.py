@@ -204,7 +204,7 @@ def update_image():
 
 
 # tags
-"""/tags/
+"""
 GET ?image_id=[int]
 resp: 200, body:
 {
@@ -231,7 +231,7 @@ def show_tags():
     return jsonify(resp)
 
 
-"""/tags/add
+"""
 POST {
     "image_id": [Number],
     "text": [String]
@@ -258,7 +258,7 @@ def add_tags():
     })
 
 
-"""/tags/delete
+"""
 POST {
     "id": [Number]
 }
@@ -309,7 +309,7 @@ def update_tag():
 
 
 # group
-"""/groups/
+"""
 GET
 resp: 200, body:
 {
@@ -325,7 +325,7 @@ def show_groups():
     return jsonify(resp)
 
 
-"""/groups/add
+"""
 POST {
     "name": [String],
 }
@@ -343,7 +343,7 @@ def add_group():
     })
 
 
-"""/groups/delete
+"""
 POST {
     "ids": [Array[Number]],
 }
@@ -368,7 +368,7 @@ def delete_group():
     })
 
 
-"""/groups/update
+"""
 POST {
     "id": [Number],
     "name": [String]
