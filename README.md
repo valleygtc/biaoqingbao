@@ -1,4 +1,4 @@
-# 简介
+## 简介
 “表情宝”后端。
 
 功能：
@@ -8,13 +8,32 @@
 - 图片分组。
 - 图片导入导出。
 
-# 安装：
-TODO：docker
+## 自动部署：
+TODO：pyinfra
 
-# 使用：
-TODO：docker
+## 手动部署：
+依赖：
+- postgresql
 
-# 开发：
+```bash
+$ python3 setup.py sdist
+$ scp dist/biaoqingbao-x.x.x.tar.gz <user>@<host>:/opt/www/biaoqingbao
+$ scp env.sh.example <user>@<host>:/opt/www/biaoqingbao/env.sh
+
+$ ssh <user>@<host>
+$ cd /opt/www/biaoqingbao
+$ python3 -m venv .venv
+$ . .venv/bin/activate
+$ pip install biaoqingbao-x.x.x.tar.gz
+
+$ vi env.sh # 填写好程序运行所需环境变量。
+$ source env.sh
+
+$ biaoqingbao create-table
+$ biaoqingbao run
+```
+
+## 开发：
 说明：
 后端使用 Python Flask + waitress，前端使用 React + material-ui 开发。
 
@@ -29,14 +48,15 @@ $ source .venv/bin/activate
 # install biaoqingbao and its dependencies.
 $ pip install --editable .[dev]
 
-# run unittest discover
-$ python -m unittest
-
 # ENV
 $ cp env.sh.example env.sh
 $ vi env.sh # 填写好程序运行所需环境变量。
 $ source env.sh # 读入环境变量。
 
+# run unittest discover
+$ python -m unittest
+
+$ biaoqingbao create-table
 $ flask run
 ```
 
@@ -44,5 +64,5 @@ $ flask run
 
 见：https://github.com/valleygtc/biaoqingbao-frontend
 
-# 构建与发布：
+## 构建与发布：
 TODO：docker
