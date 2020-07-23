@@ -7,7 +7,8 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(configs)
 
-    from .views import bp_main
+    from .views import bp_user, bp_main
+    app.register_blueprint(bp_user)
     app.register_blueprint(bp_main)
 
     from .models import db, Image, Group
