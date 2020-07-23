@@ -2,18 +2,10 @@ import unittest
 import json
 from io import BytesIO
 
-from biaoqingbao import db, Image, Tag
+from werkzeug.security import generate_password_hash
+
+from biaoqingbao import db, Image, Tag, User
 from tests import test_app, create_login_client
-
-
-def fake_image():
-    img = Image(
-        data=b'abcdefggggggg',
-        type='jpeg',
-        tags=[Tag(text='aTag'), Tag(text='bTag')],
-    )
-    db.session.add(img)
-    db.session.commit()
 
 
 class TestShowTags(unittest.TestCase):
@@ -22,14 +14,25 @@ class TestShowTags(unittest.TestCase):
     def setUp(self):
         with test_app.app_context():
             db.create_all()
-            fake_image()
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            img = Image(
+                data=b'abcdefggggggg',
+                type='jpeg',
+                tags=[Tag(text='aTag', user=user), Tag(text='bTag', user=user)],
+            )
+            user.images = [img]
+            db.session.add(user)
+            db.session.commit()
     
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
     
     def test_show_all(self):
-        client = create_login_client()
+        client = create_login_client(user_id=1)
         resp = client.get(
             self.url,
         )
@@ -38,7 +41,7 @@ class TestShowTags(unittest.TestCase):
         self.assertIn('data', json_data)
 
     def test_show_image_tags(self):
-        client = create_login_client()
+        client = create_login_client(user_id=1)
         resp = client.get(
             self.url,
             query_string={'image_id': 1}
@@ -51,24 +54,34 @@ class TestShowTags(unittest.TestCase):
 class TestAddTags(unittest.TestCase):
     url = '/api/tags/add'
 
-    data = {
-        'image_id': 1,
-        'text': 'addedTag1'
-    }
-
     def setUp(self):
         with test_app.app_context():
             db.create_all()
-            fake_image()
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            img = Image(
+                data=b'abcdefggggggg',
+                type='jpeg',
+            )
+            user.images = [img]
+            db.session.add(user)
+            db.session.commit()
     
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
 
     def test_default(self):
-        client = create_login_client()
-        body = self.data.copy()
-        resp = client.post(self.url, json=body)
+        client = create_login_client(user_id=1)
+        resp = client.post(
+            self.url,
+            json={
+                'image_id': 1,
+                'text': 'addedTag1'
+            }
+        )
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
         self.assertIn('id', json_data)
@@ -77,30 +90,58 @@ class TestAddTags(unittest.TestCase):
             tag = Tag.query.get(json_data['id'])
             self.assertIsNotNone(tag)
             self.assertEqual(tag.text, 'addedTag1')
+    
+    def test_tag_other_users_image(self):
+        # setup
+        with test_app.app_context():
+            user = User(
+                email='2@foo.com',
+                password=generate_password_hash('password2'),
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        # test
+        client = create_login_client(user_id=2)
+        resp = client.post(self.url, json={
+            'image_id': 1,
+            'text': 'addedTag1'
+        })
+        self.assertEqual(resp.status_code, 403)
+        json_data = resp.get_json()
+        self.assertIn('error', json_data)
 
 
 class TestDeleteTag(unittest.TestCase):
     url = '/api/tags/delete'
 
-    data = {
-        'id': 1,
-    }
-
     def setUp(self):
         with test_app.app_context():
             db.create_all()
-            fake_image()
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            img = Image(
+                data=b'abcdefggggggg',
+                type='jpeg',
+                tags=[Tag(text='aTag', user=user)],
+            )
+            user.images = [img]
+            db.session.add(user)
+            db.session.commit()
     
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
 
     def test_normal(self):
-        client = create_login_client()
-        body = self.data.copy()
+        client = create_login_client(user_id=1)
         resp = client.post(
             self.url,
-            json=body
+            json={
+                'id': 1,
+            }
         )
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
@@ -109,3 +150,89 @@ class TestDeleteTag(unittest.TestCase):
         with test_app.app_context():
             tag = Tag.query.get(1)
             self.assertIs(tag, None)
+    
+    def test_delete_other_users_tag(self):
+        # setup
+        with test_app.app_context():
+            user = User(
+                email='2@foo.com',
+                password=generate_password_hash('password2'),
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        # test
+        client = create_login_client(user_id=2)
+        resp = client.post(
+            self.url,
+            json={
+                'id': 1,
+            }
+        )
+        self.assertEqual(resp.status_code, 403)
+        json_data = resp.get_json()
+        self.assertIn('error', json_data)
+
+
+class TestUpdateTag(unittest.TestCase):
+    url = '/api/tags/update'
+
+    def setUp(self):
+        with test_app.app_context():
+            db.create_all()
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            img = Image(
+                data=b'abcdefggggggg',
+                type='jpeg',
+                tags=[Tag(text='aTag', user=user)],
+            )
+            user.images = [img]
+            db.session.add(user)
+            db.session.commit()
+    
+    def tearDown(self):
+        with test_app.app_context():
+            db.drop_all()
+
+    def test_normal(self):
+        client = create_login_client(user_id=1)
+        resp = client.post(
+            self.url,
+            json={
+                'id': 1,
+                'text': 'updatedTag'
+            }
+        )
+        self.assertEqual(resp.status_code, 200)
+        json_data = resp.get_json()
+        self.assertIn('msg', json_data)
+        # 验证数据库中已修改
+        with test_app.app_context():
+            tag = Tag.query.get(1)
+            self.assertEqual(tag.text, 'updatedTag')
+    
+    def test_update_other_users_tag(self):
+        # setup
+        with test_app.app_context():
+            user = User(
+                email='2@foo.com',
+                password=generate_password_hash('password2'),
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        # test
+        client = create_login_client(user_id=2)
+        resp = client.post(
+            self.url,
+            json={
+                'id': 1,
+                'text': 'updatedTag'
+            }
+        )
+        self.assertEqual(resp.status_code, 403)
+        json_data = resp.get_json()
+        self.assertIn('error', json_data)

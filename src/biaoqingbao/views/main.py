@@ -250,17 +250,12 @@ resp: 200, body:
 """
 @bp_main.route('/api/tags/')
 def show_tags():
+    query = Tag.query.filter_by(user_id=session['user_id'])
     image_id = request.args.get('image_id')
     if image_id:
-        image = Image.query.get(image_id)
-        if image is None:
-            return jsonify({
-                'error': '目标图片不存在，可能是其已被删除，请刷新页面。'
-            }), 404
-        tags = image.tags
-    else:
-        tags = Tag.query.all()
+        query = query.filter_by(image_id=image_id)
 
+    tags = query.all()
     resp = {
         'data': [{'id': t.id, 'text': t.text} for t in tags],
     }
@@ -276,6 +271,7 @@ resp: 200, body: {"id": [Number]}
 """
 @bp_main.route('/api/tags/add', methods=['POST'])
 def add_tags():
+    user_id = session['user_id']
     data = request.get_json()
     image_id = data['image_id']
     image = Image.query.get(image_id)
@@ -283,14 +279,17 @@ def add_tags():
         return jsonify({
             'error': '目标图片不存在，可能是其已被删除，请刷新页面。'
         }), 404
-    
-    record = Tag(text=data['text'])
-    record.image_id=image_id
-    db.session.add(record)
-    db.session.commit()
-    return jsonify({
-        'id': record.id,
-    })
+    elif image.user_id != user_id:
+        return jsonify({
+            'error': '您无给目标图片打标签的权限。'
+        }), 403
+    else:
+        record = Tag(text=data['text'], image_id=image_id, user_id=user_id)
+        db.session.add(record)
+        db.session.commit()
+        return jsonify({
+            'id': record.id,
+        })
 
 
 """
@@ -308,6 +307,10 @@ def delete_tag():
         return jsonify({
             'error': '目标标签不存在，可能是其已被删除，请刷新页面。'
         }), 404
+    elif tag.user_id != session['user_id']:
+        return jsonify({
+            'error': '您无删除此标签的权限。'
+        }), 403
     else:
         db.session.delete(tag)
         db.session.commit()
@@ -332,13 +335,16 @@ def update_tag():
         return jsonify({
             'error': '目标标签不存在，可能是其已被删除，请刷新页面。'
         }), 404
-    
-    tag.text = data['text']
-    db.session.commit()
-
-    return jsonify({
-        'msg': '成功将目标标签重命名'
-    })
+    elif tag.user_id != session['user_id']:
+        return jsonify({
+            'error': '您无修改此标签的权限。'
+        }), 403
+    else:
+        tag.text = data['text']
+        db.session.commit()
+        return jsonify({
+            'msg': '成功将目标标签重命名'
+        })
 
 
 # group
