@@ -1,28 +1,10 @@
 import unittest
 import json
 
-from biaoqingbao import db, Image, Group, Tag
+from werkzeug.security import generate_password_hash
+
+from biaoqingbao import db, Image, Group, Tag, User
 from tests import test_app, create_login_client
-
-
-def fake_records(n):
-    for i in range(1, n + 1):
-        group = Group(
-            name=f'testGroup{i}',
-        )
-        img1 = Image(
-            data=b'abcdefggggggg',
-            type='jpeg',
-            tags=[Tag(text='aTag'), Tag(text='bTag')]
-        )
-        img2 = Image(
-            data=b'abcdefggggggg',
-            type='jpeg',
-            tags=[Tag(text='aTag'), Tag(text='bTag')]
-        )
-        group.images = [img1, img2]
-        db.session.add(group)
-    db.session.commit()
 
 
 class TestShowGroups(unittest.TestCase):
@@ -31,41 +13,60 @@ class TestShowGroups(unittest.TestCase):
     def setUp(self):
         with test_app.app_context():
             db.create_all()
-            fake_records(3)
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            group1 = Group(
+                name=f'testGroup1',
+            )
+            group2 = Group(
+                name=f'testGroup1',
+            )
+            group3 = Group(
+                name=f'testGroup1',
+            )
+            user.groups = [group1, group2, group3]
+            db.session.add(user)
+            db.session.commit()
     
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
 
     def test_normal(self):
-        client = create_login_client()
+        client = create_login_client(user_id=1)
         resp = client.get(self.url)
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
         self.assertIn('data', json_data)
+        self.assertEqual(len(json_data['data']), 3)
 
 
 class TestAddGroup(unittest.TestCase):
     url = '/api/groups/add'
 
-    data = {
-        'name': 'addedGroup'
-    }
-
     def setUp(self):
         with test_app.app_context():
             db.create_all()
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            db.session.add(user)
+            db.session.commit()
     
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
 
     def test_normal(self):
-        client = create_login_client()
-        body = self.data.copy()
+        client = create_login_client(user_id=1)
         resp = client.post(
             self.url,
-            json=body
+            json={
+                'name': 'addedGroup'
+            }
         )
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
@@ -81,17 +82,39 @@ class TestDeleteGroup(unittest.TestCase):
     def setUp(self):
         with test_app.app_context():
             db.create_all()
-            fake_records(2)
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            group = Group(
+                name=f'testGroup',
+            )
+            user.groups.append(group)
+            img1 = Image(
+                data=b'fake binary data',
+                type='jpeg',
+                tags=[Tag(text='aTag', user=user)],
+                user=user,
+            )
+            img2 = Image(
+                data=b'fake binary data',
+                type='jpeg',
+                tags=[Tag(text='bTag', user=user)],
+                user=user,
+            )
+            group.images = [img1, img2]
+            db.session.add(user)
+            db.session.commit()
     
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
 
     def test_normal(self):
-        client = create_login_client()
+        client = create_login_client(user_id=1)
         resp = client.post(
             self.url,
-            json={'ids': [1, 2]}
+            json={'ids': [1]}
         )
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
@@ -102,10 +125,6 @@ class TestDeleteGroup(unittest.TestCase):
             # 验证 cascade delete：
             self.assertFalse(Image.query.get(1))
             self.assertFalse(Image.query.get(2))
-            self.assertFalse(Group.query.get(2))
-            # 验证 cascade delete：
-            self.assertFalse(Image.query.get(3))
-            self.assertFalse(Image.query.get(4))
     
     def test_delete_not_exists_group(self):
         client = create_login_client()
@@ -116,31 +135,57 @@ class TestDeleteGroup(unittest.TestCase):
         self.assertEqual(resp.status_code, 404)
         json_data = resp.get_json()
         self.assertIn('error', json_data)
+    
+    def test_delete_other_users_group(self):
+        # setup
+        with test_app.app_context():
+            user = User(
+                email='2@foo.com',
+                password=generate_password_hash('password2'),
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        # test
+        client = create_login_client(user_id=2)
+        resp = client.post(
+            self.url,
+            json={'ids': [1]}
+        )
+        self.assertEqual(resp.status_code, 403)
+        json_data = resp.get_json()
+        self.assertIn('error', json_data)
 
 
 class TestUpdateGroup(unittest.TestCase):
     url = '/api/groups/update'
 
-    data = {
-        'id': 1,
-        'name': 'updatedGroup',
-    }
-
     def setUp(self):
         with test_app.app_context():
             db.create_all()
-            fake_records(1)
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            group1 = Group(
+                name=f'testGroup1',
+            )
+            user.groups = [group1]
+            db.session.add(user)
+            db.session.commit()
     
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
 
     def test_normal(self):
-        client = create_login_client()
-        body = self.data.copy()
+        client = create_login_client(user_id=1)
         resp = client.post(
             self.url,
-            json=body
+            json={
+                'id': 1,
+                'name': 'updatedGroup',
+            }
         )
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
@@ -148,4 +193,27 @@ class TestUpdateGroup(unittest.TestCase):
         # 验证数据库中确实已经更新
         with test_app.app_context():
             record = Group.query.get(1)
-            self.assertEqual(record.name, body['name'])
+            self.assertEqual(record.name, 'updatedGroup')
+    
+    def test_rename_others_group(self):
+        # setup
+        with test_app.app_context():
+            user = User(
+                email='2@foo.com',
+                password=generate_password_hash('password2'),
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        # test
+        client = create_login_client(user_id=2)
+        resp = client.post(
+            self.url,
+            json={
+                'id': 1,
+                'name': 'updatedGroup',
+            }
+        )
+        self.assertEqual(resp.status_code, 403)
+        json_data = resp.get_json()
+        self.assertIn('error', json_data)

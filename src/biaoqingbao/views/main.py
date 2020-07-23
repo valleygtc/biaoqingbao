@@ -342,7 +342,7 @@ resp: 200, body:
 """
 @bp_main.route('/api/groups/')
 def show_groups():
-    groups = Group.query.order_by(Group.name).all()
+    groups = Group.query.filter_by(user_id=session['user_id']).order_by(Group.create_at).all()
     resp = {
         'data': [{'id': r.id, 'name': r.name} for r in groups],
     }
@@ -359,7 +359,7 @@ resp: 200, body: {"id": [int]}
 def add_group():
     data = request.get_json()
     name = data['name']
-    record = Group(name=name)
+    record = Group(name=name, user_id=session['user_id'])
     db.session.add(record)
     db.session.commit()
     return jsonify({
@@ -379,13 +379,19 @@ def delete_group():
     group_ids = data['ids']
     for id in group_ids:
         group = Group.query.get(id)
-        if group:
-            db.session.delete(group)
-        else:
+        if not group:
             err = f'组（id={id}）不存在，可能是其已被删除，请刷新页面。'
             return jsonify({
                 'error': err
             }), 404
+        elif group.user_id != session['user_id']:
+            err = f'您无删除组（id={id}）的权限。'
+            return jsonify({
+                'error': err
+            }), 403
+        else:
+            db.session.delete(group)
+
     db.session.commit()
     return jsonify({
         'msg': f'成功删除组（ids={group_ids}）'
@@ -405,11 +411,16 @@ def update_group():
     group_id = data['id']
     name = data['name']
     group = Group.query.get(group_id)
-    group.name = name
-    db.session.commit()
-    return jsonify({
-        'msg': '成功重命名组'
-    })
+    if group.user_id == session['user_id']:
+        group.name = name
+        db.session.commit()
+        return jsonify({
+            'msg': '成功重命名组。',
+        })
+    else:
+        return jsonify({
+            'error': '您无重命名此组的权限。',
+        }), 403
 
 
 """
