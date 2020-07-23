@@ -205,10 +205,15 @@ def update_image():
     image_id = data['id']
     image = Image.query.get(image_id)
     if not image:
-        err = '图片不存在，可能是其已被删除，请刷新页面。'
         return jsonify({
-            'error': err
+            'error': '图片不存在，可能是其已被删除，请刷新页面。'
         }), 404
+
+    user_id = session['user_id']    
+    if image.user_id != user_id:
+        return jsonify({
+            'error': '您无移动此图片的权限。',
+        }), 403
     
     group_id = data['group_id']
     if group_id is None:
@@ -223,12 +228,16 @@ def update_image():
             return jsonify({
                 'error': '所选组不存在，可能是其已被删除，请刷新页面。'
             }), 404
-
-        image.group = group
-        db.session.commit()
-        return jsonify({
-            'msg': f'成功将图片移至组“{group.name}”。'
-        })
+        elif group.user_id != user_id:
+            return jsonify({
+                'error': '您无将图片移至此组的权限。'
+            }), 403
+        else:
+            image.group = group
+            db.session.commit()
+            return jsonify({
+                'msg': f'成功将图片移至组“{group.name}”。'
+            })
 
 
 # tags
