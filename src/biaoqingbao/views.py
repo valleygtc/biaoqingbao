@@ -128,7 +128,7 @@ resp: 200, body:
     }
 }
 """
-@bp_main.route('/api/images/', methods=['GET'])
+@bp_main.route('/api/images/')
 def show_images():
     # apply search
     groupId = request.args.get('groupId')
@@ -183,7 +183,7 @@ GET ?id=[int]
 resp: 200, content-type: image/<type>
 body: 图片二进制数据
 """
-@bp_main.route('/api/images/<int:image_id>', methods=['GET'])
+@bp_main.route('/api/images/<int:image_id>')
 def show_image(image_id):
     image = Image.query.get(image_id)
     resp = Response(image.data, mimetype=f'image/{image.type}')
@@ -302,7 +302,7 @@ resp: 200, body:
     "data": [Array[Object]] // {"id": 1, "text": "xxx"}
 }
 """
-@bp_main.route('/api/tags/', methods=['GET'])
+@bp_main.route('/api/tags/')
 def show_tags():
     image_id = request.args.get('image_id')
     if image_id:
@@ -407,7 +407,7 @@ resp: 200, body:
     "data": [Array[Object]] // {"id": 1, "name": "xxx"}
 }
 """
-@bp_main.route('/api/groups/', methods=['GET'])
+@bp_main.route('/api/groups/')
 def show_groups():
     groups = Group.query.order_by(Group.name).all()
     resp = {
