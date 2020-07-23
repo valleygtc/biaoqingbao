@@ -54,25 +54,26 @@ resp: 200, body:
 """
 @bp_main.route('/api/images/')
 def show_images():
+    user_id = session['user_id']
+    query = Image.query.filter_by(user_id=user_id)
+
     # apply search
     groupId = request.args.get('groupId')
     tag = request.args.get('tag')
     if groupId and tag:
-        query = Image.query\
+        query = query\
             .join(Image.group)\
             .join(Image.tags)\
             .filter(Group.id == groupId)\
             .filter(Tag.text.contains(tag))
     elif groupId:
-        query = Image.query\
+        query = query\
             .join(Image.group)\
             .filter(Group.id == groupId)
     elif tag:
-        query = Image.query\
+        query = query\
             .join(Image.tags)\
             .filter(Tag.text.contains(tag))
-    else:
-        query = Image.query
 
     # apply pagination
     DEFAULT_PER_PAGE = 20
@@ -110,6 +111,11 @@ body: 图片二进制数据
 @bp_main.route('/api/images/<int:image_id>')
 def show_image(image_id):
     image = Image.query.get(image_id)
+    if image.user_id != session['user_id']:
+        return jsonify({
+            'error': '您没有访问此图片的权限'
+        }), 403
+
     resp = Response(image.data, mimetype=f'image/{image.type}')
     return resp
         
@@ -127,30 +133,35 @@ resp: 200, body: {"msg": [String]}
 """
 @bp_main.route('/api/images/add', methods=['POST'])
 def add_image():
+    user_id = session['user_id']
     image_file = request.files['image']
     image_data = image_file.read()
     image_file.close()
     metadata = json.loads(request.form['metadata'])
-    record = Image(
+    image = Image(
         data=image_data,
         type=metadata['type'],
-        tags=[Tag(text=t) for t in metadata['tags']],
+        tags=[Tag(text=t, user_id=user_id) for t in metadata['tags']],
+        user_id=user_id
     )
     group_id = metadata.get('group_id')
     if group_id is not None:
         group = Group.query.get(group_id)
         if group is None:
-            err = f'组（id={group_id}）不存在。'
             return jsonify({
-                'error': err
+                'error': '所选组不存在。'
             }), 400
+        elif group.user_id != user_id:
+            return jsonify({
+                'error': '您没有添加图片至此组的权限'
+            }), 403
+        else:
+            image.group = group
 
-        record.group = group
-
-    db.session.add(record)
+    db.session.add(image)
     db.session.commit()
     return jsonify({
-        'msg': f'成功添加图片：{record}'
+        'id': image.id,
     })
 
 
@@ -166,15 +177,18 @@ def delete_image():
     image_id = data['id']
     image = Image.query.get(image_id)
     if image is None:
-        err = f'图片（id={image_id}）不存在，可能是其已被删除，请刷新页面。'
         return jsonify({
-            'error': err
+            'error': '图片不存在，可能是其已被删除，请刷新页面。',
         }), 404
+    elif image.user_id != session['user_id']:
+        return jsonify({
+            'error': '您没有删除此图片的权限',
+        }), 403
     else:
         db.session.delete(image)
         db.session.commit()
         return jsonify({
-            'msg': f'成功删除图片（id={image_id}）'
+            'msg': '成功删除图片'
         })
 
 
@@ -191,7 +205,7 @@ def update_image():
     image_id = data['id']
     image = Image.query.get(image_id)
     if not image:
-        err = f'图片（id={image_id}）不存在，可能是其已被删除，请刷新页面。'
+        err = '图片不存在，可能是其已被删除，请刷新页面。'
         return jsonify({
             'error': err
         }), 404
@@ -201,20 +215,19 @@ def update_image():
         image.group_id = None
         db.session.commit()
         return jsonify({
-            'msg': f'成功将图片（id={image_id}）移至组“全部”。'
+            'msg': '成功将图片移至组“全部”。'
         })
     else:
         group = Group.query.get(group_id)
         if not group:
-            err = f'组（id={group_id}）不存在，可能是其已被删除，请刷新页面。'
             return jsonify({
-                'error': err
+                'error': '所选组不存在，可能是其已被删除，请刷新页面。'
             }), 404
 
         image.group = group
         db.session.commit()
         return jsonify({
-            'msg': f'成功将图片（id={image_id}）移至组“{group.name}”。'
+            'msg': f'成功将图片移至组“{group.name}”。'
         })
 
 
@@ -410,7 +423,7 @@ resp: 200, body: serve export.zip file.
 @bp_main.route('/api/images/export')
 def export_images():
     buffer = io.BytesIO()
-    images = Image.query.all()
+    images = Image.query.filter_by(user_id=session['user_id']).all()
     with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as fh:
         for image in images:
             fileinfo = zipfile.ZipInfo(

@@ -2,39 +2,10 @@ import unittest
 import json
 from io import BytesIO
 
-from biaoqingbao import db, Image, Group, Tag
+from werkzeug.security import generate_password_hash
+
+from biaoqingbao import db, Image, Group, Tag, User
 from tests import test_app, create_login_client
-
-
-def fake_groups(n):
-    for i in range(1, n + 1):
-        group = Group(
-            name=f'testGroup{i}',
-        )
-        img1 = Image(
-            data=b'fake binary data',
-            type='jpeg',
-            tags=[Tag(text='aTag'), Tag(text='bTag')]
-        )
-        img2 = Image(
-            data=b'fake binary data',
-            type='jpeg',
-            tags=[Tag(text='aTag'), Tag(text='bTag')]
-        )
-        group.images = [img1, img2]
-        db.session.add(group)
-    db.session.commit()
-
-
-def fake_images(n):
-    for i in range(n):
-        img = Image(
-            data=b'fake binary data',
-            type='jpeg',
-            tags=[Tag(text='aTag'), Tag(text='bTag')]
-        )
-        db.session.add(img)
-    db.session.commit()
 
 
 class TestShowImageList(unittest.TestCase):
@@ -43,21 +14,33 @@ class TestShowImageList(unittest.TestCase):
     def setUp(self):
         with test_app.app_context():
             db.create_all()
-            fake_images(20)
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            for _ in range(20):
+                img = Image(
+                    data=b'fake binary data',
+                    type='jpeg',
+                    tags=[Tag(text='aTag', user=user), Tag(text='bTag', user=user)],
+                )
+                user.images.append(img)
+            db.session.add(user)
+            db.session.commit()
     
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
 
     def test_default(self):
-        client = create_login_client()
+        client = create_login_client(user_id=1)
         resp = client.get(self.url)
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
         self.assertIn('data', json_data)
     
     def test_pagination(self):
-        client = create_login_client()
+        client = create_login_client(user_id=1)
         resp = client.get(self.url, query_string={
             'page': 2,
             'per_page': 10,
@@ -69,53 +52,41 @@ class TestShowImageList(unittest.TestCase):
         self.assertEqual(len(json_data['data']), 10)
 
 
-class TestShowImage(unittest.TestCase):
-    url = '/api/images/{id}'
-
-    def setUp(self):
-        with test_app.app_context():
-            db.create_all()
-            fake_images(1)
-    
-    def tearDown(self):
-        with test_app.app_context():
-            db.drop_all()
-
-    def test_show_one_images_data(self):
-        client = create_login_client()
-        resp = client.get(
-            self.url.format(id=1),
-        )
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.mimetype, 'image/jpeg')
-        self.assertEqual(resp.headers.get('Content-Type'), 'image/jpeg')
-
-
 class TestSearchImage(unittest.TestCase):
     url = '/api/images/'
 
     def setUp(self):
         with test_app.app_context():
             db.create_all()
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
             group = Group(
                 name=f'testGroup',
             )
+            user.groups.append(group)
             img1 = Image(
                 data=b'fake binary data',
                 type='jpeg',
-                tags=[Tag(text='aTag')],
+                tags=[Tag(text='aTag', user=user)],
+                user=user,
             )
             img2 = Image(
                 data=b'fake binary data',
                 type='jpeg',
-                tags=[Tag(text='bTag')],
+                tags=[Tag(text='bTag', user=user)],
+                user=user,
             )
             group.images = [img1, img2]
-            db.session.add(group)
+            db.session.add(user)
+            db.session.commit()
+
             img3 = Image(
                 data=b'fake binary data',
                 type='jpeg',
-                tags=[Tag(text='cTag')],
+                tags=[Tag(text='cTag', user=user)],
+                user=user,
             )
             db.session.add(img3)
             db.session.commit()
@@ -125,7 +96,7 @@ class TestSearchImage(unittest.TestCase):
             db.drop_all()
     
     def test_search_tag(self):
-        client = create_login_client()
+        client = create_login_client(user_id=1)
         resp = client.get(
             self.url,
             query_string={'tag': 'aTag'}
@@ -136,7 +107,7 @@ class TestSearchImage(unittest.TestCase):
         self.assertEqual(len(json_data['data']), 1)
     
     def test_search_part_tag(self):
-        client = create_login_client()
+        client = create_login_client(user_id=1)
         resp = client.get(
             self.url,
             query_string={'tag': 'aT'}
@@ -147,7 +118,7 @@ class TestSearchImage(unittest.TestCase):
         self.assertEqual(len(json_data['data']), 1)
 
     def test_search_group(self):
-        client = create_login_client()
+        client = create_login_client(user_id=1)
         resp = client.get(
             self.url,
             query_string={'groupId': 1}
@@ -158,7 +129,7 @@ class TestSearchImage(unittest.TestCase):
         self.assertEqual(len(json_data['data']), 2)
     
     def test_search_tag_within_group(self):
-        client = create_login_client()
+        client = create_login_client(user_id=1)
         resp = client.get(
             self.url,
             query_string={
@@ -172,19 +143,71 @@ class TestSearchImage(unittest.TestCase):
         self.assertEqual(len(json_data['data']), 1)
 
 
+class TestShowImage(unittest.TestCase):
+    url = '/api/images/{id}'
+
+    def setUp(self):
+        with test_app.app_context():
+            db.create_all()
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            img = Image(
+                data=b'fake binary data',
+                type='jpeg',
+                tags=[Tag(text='aTag', user=user)],
+            )
+            user.images.append(img)
+            db.session.add(user)
+            db.session.commit()
+    
+    def tearDown(self):
+        with test_app.app_context():
+            db.drop_all()
+
+    def test_normal(self):
+        client = create_login_client(user_id=1)
+        resp = client.get(
+            self.url.format(id=1),
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.mimetype, 'image/jpeg')
+        self.assertEqual(resp.headers.get('Content-Type'), 'image/jpeg')
+
+    def test_fetch_other_users_image(self):
+        client = create_login_client(user_id=2)
+        resp = client.get(
+            self.url.format(id=1),
+        )
+        self.assertEqual(resp.status_code, 403)
+        json_data = resp.get_json()
+        self.assertIn('error', json_data)
+
+
 class TestAddImage(unittest.TestCase):
     url = '/api/images/add'
 
     def setUp(self):
         with test_app.app_context():
             db.create_all()
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            group = Group(
+                name=f'testGroup',
+            )
+            user.groups.append(group)
+            db.session.add(user)
+            db.session.commit()
     
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
     
     def test_blank_tags(self):
-        client = create_login_client()
+        client = create_login_client(user_id=1)
         resp = client.post(
             self.url,
             data={
@@ -197,7 +220,7 @@ class TestAddImage(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
-        self.assertIn('msg', json_data)
+        self.assertIn('id', json_data)
         # 验证已插入数据库
         with test_app.app_context():
             record = Image.query.get(1)
@@ -205,7 +228,7 @@ class TestAddImage(unittest.TestCase):
             self.assertEqual(record.tags, [])
 
     def test_with_tags(self):
-        client = create_login_client()
+        client = create_login_client(user_id=1)
         resp = client.post(
             self.url,
             data={
@@ -218,23 +241,13 @@ class TestAddImage(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
-        self.assertIn('msg', json_data)
+        self.assertIn('id', json_data)
         # 验证已插入数据库
         with test_app.app_context():
             self.assertTrue(Image.query.get(1))
     
-    def test_with_group(self):
-        # setup
-        with test_app.app_context():
-            group = Group(
-                id=1,
-                name='testGroup',
-            )
-            db.session.add(group)
-            db.session.commit()
-        
-        # test
-        client = create_login_client()
+    def test_add_to_group(self):
+        client = create_login_client(user_id=1)
         resp = client.post(
             self.url,
             data={
@@ -248,13 +261,58 @@ class TestAddImage(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
-        self.assertIn('msg', json_data)
+        self.assertIn('id', json_data)
         # 验证已插入数据库
         with test_app.app_context():
             image = Image.query.get(1)
             self.assertTrue(image)
             self.assertEqual(image.group_id, 1)
-
+    
+    def test_add_to_not_exists_group(self):
+        client = create_login_client(user_id=1)
+        resp = client.post(
+            self.url,
+            data={
+                'image': (BytesIO(b'added image data'), 'test_image.jpeg'),
+                'metadata': json.dumps({
+                    'type': 'jpeg',
+                    'tags': ['aTag', 'bTag'],
+                    'group_id': 1000,
+                })
+            }
+        )
+        self.assertEqual(resp.status_code, 400)
+        json_data = resp.get_json()
+        self.assertIn('error', json_data)
+    
+    def test_add_to_other_users_group(self):
+        # setup
+        with test_app.app_context():
+            user = User(
+                email='2@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        # test
+        client = create_login_client(user_id=2)
+        resp = client.post(
+            self.url,
+            data={
+                'image': (BytesIO(b'added image data'), 'test_image.jpeg'),
+                'metadata': json.dumps({
+                    'type': 'jpeg',
+                    'tags': ['aTag', 'bTag'],
+                    'group_id': 1,
+                })
+            }
+        )
+        self.assertEqual(resp.status_code, 403)
+        json_data = resp.get_json()
+        self.assertIn('error', json_data)
+        
+    
 
 class TestDeleteImage(unittest.TestCase):
     url = '/api/images/delete'
@@ -262,14 +320,25 @@ class TestDeleteImage(unittest.TestCase):
     def setUp(self):
         with test_app.app_context():
             db.create_all()
-            fake_images(1)
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            img = Image(
+                data=b'fake binary data',
+                type='jpeg',
+                tags=[Tag(text='aTag', user=user)],
+            )
+            user.images.append(img)
+            db.session.add(user)
+            db.session.commit()
     
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
 
     def test_normal(self):
-        client = create_login_client()
+        client = create_login_client(user_id=1)
         resp = client.post(
             self.url,
             json={'id': 1}
@@ -282,7 +351,7 @@ class TestDeleteImage(unittest.TestCase):
             self.assertFalse(Image.query.get(1))
     
     def test_delete_not_exists_image(self):
-        client = create_login_client()
+        client = create_login_client(user_id=1)
         resp = client.post(
             self.url,
             json={'id': 10000}
@@ -290,60 +359,114 @@ class TestDeleteImage(unittest.TestCase):
         self.assertEqual(resp.status_code, 404)
         json_data = resp.get_json()
         self.assertIn('error', json_data)
+    
+    def test_delete_other_users_image(self):
+        # setup
+        with test_app.app_context():
+            user = User(
+                email='2@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        client = create_login_client(user_id=2)
+        resp = client.post(
+            self.url,
+            json={'id': 1}
+        )
+        self.assertEqual(resp.status_code, 403)
+        json_data = resp.get_json()
+        self.assertIn('error', json_data)
 
 
 class TestUpdateImage(unittest.TestCase):
     url = '/api/images/update'
 
-    data = {
-        'id': 1,
-        'group_id': 1,
-    }
-
     def setUp(self):
         with test_app.app_context():
             db.create_all()
-            fake_images(1)
-            fake_groups(1)
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            group = Group(
+                name=f'testGroup',
+            )
+            user.groups.append(group)
+            img1 = Image(
+                data=b'fake binary data',
+                type='jpeg',
+                tags=[Tag(text='aTag', user=user)],
+                user=user,
+            )
+            group.images = [img1]
+            db.session.add(user)
+            db.session.commit()
+
+            img2 = Image(
+                data=b'fake binary data',
+                type='jpeg',
+                tags=[Tag(text='cTag', user=user)],
+                user=user,
+            )
+            db.session.add(img2)
+            db.session.commit()
     
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
 
-    def test_move_to_another_group_normal(self):
-        client = create_login_client()
-        body = self.data.copy()
+    def test_move_image_from_all_to_group(self):
+        client = create_login_client(user_id=1)
         resp = client.post(
             self.url,
-            json=body
+            json={
+                'id': 2,
+                'group_id': 1,
+            },
         )
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
         self.assertIn('msg', json_data)
         with test_app.app_context():
             self.assertEqual(
-                Image.query.get(1).group_id,
+                Image.query.get(2).group_id,
                 1,
             )
-
-    def test_move_to_not_exists_group(self):
-        client = create_login_client()
-        body = self.data.copy()
-        body['group_id'] = 10000
+    
+    def test_move_not_exist_image_(self):
+        client = create_login_client(user_id=1)
         resp = client.post(
             self.url,
-            json=body
+            json={
+                'id': 1000,
+                'group_id': 1,
+            },
+        )
+        self.assertEqual(resp.status_code, 404)
+        json_data = resp.get_json()
+        self.assertIn('error', json_data)
+
+    def test_move_to_not_exists_group(self):
+        client = create_login_client(user_id=1)
+        resp = client.post(
+            self.url,
+            json={
+                'id': 2,
+                'group_id': 1000,
+            }
         )
         self.assertEqual(resp.status_code, 404)
         json_data = resp.get_json()
         self.assertIn('error', json_data)
     
-    def test_move_to_all(self):
-        client = create_login_client()
+    def test_move_image_from_group_to_all(self):
+        client = create_login_client(user_id=1)
         resp = client.post(
             self.url,
             json={
-                'id': 2,
+                'id': 1,
                 'group_id': None,
             }
         )
@@ -352,7 +475,7 @@ class TestUpdateImage(unittest.TestCase):
         self.assertIn('msg', json_data)
         with test_app.app_context():
             self.assertIs(
-                Image.query.get(2).group_id,
+                Image.query.get(1).group_id,
                 None,
             )
 
@@ -363,7 +486,19 @@ class TestExportImages(unittest.TestCase):
     def setUp(self):
         with test_app.app_context():
             db.create_all()
-            fake_images(20)
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            for _ in range(20):
+                img = Image(
+                    data=b'fake binary data',
+                    type='jpeg',
+                    tags=[Tag(text='aTag', user=user), Tag(text='bTag', user=user)]
+                )
+                user.images.append(img)
+            db.session.add(user)
+            db.session.commit()
     
     def tearDown(self):
         with test_app.app_context():
