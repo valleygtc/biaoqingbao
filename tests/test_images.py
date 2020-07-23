@@ -3,7 +3,7 @@ import json
 from io import BytesIO
 
 from biaoqingbao import db, Image, Group, Tag
-from tests import test_app
+from tests import test_app, create_login_client
 
 
 def fake_groups(n):
@@ -50,14 +50,14 @@ class TestShowImageList(unittest.TestCase):
             db.drop_all()
 
     def test_default(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.get(self.url)
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
         self.assertIn('data', json_data)
     
     def test_pagination(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.get(self.url, query_string={
             'page': 2,
             'per_page': 10,
@@ -82,7 +82,7 @@ class TestShowImage(unittest.TestCase):
             db.drop_all()
 
     def test_show_one_images_data(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.get(
             self.url.format(id=1),
         )
@@ -125,7 +125,7 @@ class TestSearchImage(unittest.TestCase):
             db.drop_all()
     
     def test_search_tag(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.get(
             self.url,
             query_string={'tag': 'aTag'}
@@ -136,7 +136,7 @@ class TestSearchImage(unittest.TestCase):
         self.assertEqual(len(json_data['data']), 1)
     
     def test_search_part_tag(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.get(
             self.url,
             query_string={'tag': 'aT'}
@@ -147,7 +147,7 @@ class TestSearchImage(unittest.TestCase):
         self.assertEqual(len(json_data['data']), 1)
 
     def test_search_group(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.get(
             self.url,
             query_string={'groupId': 1}
@@ -158,7 +158,7 @@ class TestSearchImage(unittest.TestCase):
         self.assertEqual(len(json_data['data']), 2)
     
     def test_search_tag_within_group(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.get(
             self.url,
             query_string={
@@ -184,7 +184,7 @@ class TestAddImage(unittest.TestCase):
             db.drop_all()
     
     def test_blank_tags(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.post(
             self.url,
             data={
@@ -205,7 +205,7 @@ class TestAddImage(unittest.TestCase):
             self.assertEqual(record.tags, [])
 
     def test_with_tags(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.post(
             self.url,
             data={
@@ -234,7 +234,7 @@ class TestAddImage(unittest.TestCase):
             db.session.commit()
         
         # test
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.post(
             self.url,
             data={
@@ -269,7 +269,7 @@ class TestDeleteImage(unittest.TestCase):
             db.drop_all()
 
     def test_normal(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.post(
             self.url,
             json={'id': 1}
@@ -282,7 +282,7 @@ class TestDeleteImage(unittest.TestCase):
             self.assertFalse(Image.query.get(1))
     
     def test_delete_not_exists_image(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.post(
             self.url,
             json={'id': 10000}
@@ -311,7 +311,7 @@ class TestUpdateImage(unittest.TestCase):
             db.drop_all()
 
     def test_move_to_another_group_normal(self):
-        client = test_app.test_client()
+        client = create_login_client()
         body = self.data.copy()
         resp = client.post(
             self.url,
@@ -327,7 +327,7 @@ class TestUpdateImage(unittest.TestCase):
             )
 
     def test_move_to_not_exists_group(self):
-        client = test_app.test_client()
+        client = create_login_client()
         body = self.data.copy()
         body['group_id'] = 10000
         resp = client.post(
@@ -339,7 +339,7 @@ class TestUpdateImage(unittest.TestCase):
         self.assertIn('error', json_data)
     
     def test_move_to_all(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.post(
             self.url,
             json={
@@ -370,6 +370,6 @@ class TestExportImages(unittest.TestCase):
             db.drop_all()
 
     def test_default(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.get(self.url)
         self.assertEqual(resp.status_code, 200)

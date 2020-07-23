@@ -2,7 +2,7 @@ import unittest
 import json
 
 from biaoqingbao import db, Image, Group, Tag
-from tests import test_app
+from tests import test_app, create_login_client
 
 
 def fake_records(n):
@@ -38,7 +38,7 @@ class TestShowGroups(unittest.TestCase):
             db.drop_all()
 
     def test_normal(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.get(self.url)
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
@@ -61,7 +61,7 @@ class TestAddGroup(unittest.TestCase):
             db.drop_all()
 
     def test_normal(self):
-        client = test_app.test_client()
+        client = create_login_client()
         body = self.data.copy()
         resp = client.post(
             self.url,
@@ -88,7 +88,7 @@ class TestDeleteGroup(unittest.TestCase):
             db.drop_all()
 
     def test_normal(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.post(
             self.url,
             json={'ids': [1, 2]}
@@ -108,7 +108,7 @@ class TestDeleteGroup(unittest.TestCase):
             self.assertFalse(Image.query.get(4))
     
     def test_delete_not_exists_group(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.post(
             self.url,
             json={'ids': [10000]}
@@ -136,7 +136,7 @@ class TestUpdateGroup(unittest.TestCase):
             db.drop_all()
 
     def test_normal(self):
-        client = test_app.test_client()
+        client = create_login_client()
         body = self.data.copy()
         resp = client.post(
             self.url,

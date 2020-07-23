@@ -11,6 +11,16 @@ from ..models import Image, Group, Tag, User
 bp_main = Blueprint('bp_main', __name__)
 
 
+@bp_main.before_request
+def handle_authen():
+    if not session.get('login') or not session.get('user_id'):
+        return jsonify({
+            'error': '用户未登录',
+        }), 401
+    else:
+        return
+
+
 # images
 """
 GET

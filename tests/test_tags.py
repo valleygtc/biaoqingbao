@@ -3,7 +3,7 @@ import json
 from io import BytesIO
 
 from biaoqingbao import db, Image, Tag
-from tests import test_app
+from tests import test_app, create_login_client
 
 
 def fake_image():
@@ -29,7 +29,7 @@ class TestShowTags(unittest.TestCase):
             db.drop_all()
     
     def test_show_all(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.get(
             self.url,
         )
@@ -38,7 +38,7 @@ class TestShowTags(unittest.TestCase):
         self.assertIn('data', json_data)
 
     def test_show_image_tags(self):
-        client = test_app.test_client()
+        client = create_login_client()
         resp = client.get(
             self.url,
             query_string={'image_id': 1}
@@ -66,7 +66,7 @@ class TestAddTags(unittest.TestCase):
             db.drop_all()
 
     def test_default(self):
-        client = test_app.test_client()
+        client = create_login_client()
         body = self.data.copy()
         resp = client.post(self.url, json=body)
         self.assertEqual(resp.status_code, 200)
@@ -96,7 +96,7 @@ class TestDeleteTag(unittest.TestCase):
             db.drop_all()
 
     def test_normal(self):
-        client = test_app.test_client()
+        client = create_login_client()
         body = self.data.copy()
         resp = client.post(
             self.url,
