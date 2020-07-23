@@ -48,6 +48,7 @@ resp: 404, body:
 - 401 Unauthorized: 用户未登录
 - 403 Forbidden: 登陆的用户没有此操作权限
 - 404 NOT FOUND: 用户发出的请求针对的是不存在的记录，服务器没有进行操作，该操作是幂等的。（eg. 要删除不存在的项）
+- 409 Conflict：电子邮箱已存在，注册失败。
 - 500 Internal Server Error: 数据库蹦了，cmdb 接口异常，及其他未捕获异常
 - Flask 框架自行处理的异常情况，如：404 Not Found 等
 
