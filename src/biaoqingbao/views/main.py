@@ -245,9 +245,8 @@ def show_tags():
     if image_id:
         image = Image.query.get(image_id)
         if image is None:
-            err = f'图片（id={image_id}）不存在，可能是其已被删除，请刷新页面。'
             return jsonify({
-                'error': err
+                'error': '目标图片不存在，可能是其已被删除，请刷新页面。'
             }), 404
         tags = image.tags
     else:
@@ -272,9 +271,8 @@ def add_tags():
     image_id = data['image_id']
     image = Image.query.get(image_id)
     if image is None:
-        err = f'图片（id={image_id}）不存在，可能是其已被删除，请刷新页面。'
         return jsonify({
-            'error': err
+            'error': '目标图片不存在，可能是其已被删除，请刷新页面。'
         }), 404
     
     record = Tag(text=data['text'])
@@ -298,15 +296,14 @@ def delete_tag():
     tag_id = data['id']
     tag = Tag.query.get(tag_id)
     if tag is None:
-        err = f'标签（id={tag_id}）不存在，可能是其已被删除，请刷新页面。'
         return jsonify({
-            'error': err
+            'error': '目标标签不存在，可能是其已被删除，请刷新页面。'
         }), 404
     else:
         db.session.delete(tag)
         db.session.commit()
         return jsonify({
-            'msg': f'成功删除标签（id={tag_id}）'
+            'msg': '成功删除标签'
         })
 
 
@@ -323,16 +320,15 @@ def update_tag():
     tag_id = data['id']
     tag = Tag.query.get(tag_id)
     if tag is None:
-        err = f'标签（id={tag_id}）不存在，可能是其已被删除，请刷新页面。'
         return jsonify({
-            'error': err
+            'error': '目标标签不存在，可能是其已被删除，请刷新页面。'
         }), 404
     
     tag.text = data['text']
     db.session.commit()
 
     return jsonify({
-        'msg': f'成功将标签（id={tag_id}）重命名为：{data["text"]}'
+        'msg': '成功将目标标签重命名'
     })
 
 
@@ -412,7 +408,7 @@ def update_group():
     group.name = name
     db.session.commit()
     return jsonify({
-        'msg': f'成功更新组：{group}'
+        'msg': '成功重命名组'
     })
 
 
