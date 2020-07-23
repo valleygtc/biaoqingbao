@@ -22,6 +22,14 @@ def create_table():
         db.create_all()
 
 
+@cli.command()
+def drop_all():
+    """Drop all database tables."""
+    app = create_app()
+    with app.app_context():
+        db.drop_all()
+
+
 @cli.command('run')
 @click.option('--port', default=5000, help='Network port to listen to.')
 def run(port):
