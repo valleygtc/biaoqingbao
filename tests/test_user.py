@@ -91,19 +91,6 @@ class TestLogin(unittest.TestCase):
             self.assertTrue(session['login'])
             self.assertEqual(session['user_id'], 1)
     
-    def test_already_logined(self):
-        with create_login_client(user_id=1) as client:
-            resp = client.post(
-                self.url,
-                json=self.data,
-            )
-            self.assertEqual(resp.status_code, 200)
-            json_data = resp.get_json()
-            self.assertIn('msg', json_data)
-
-            self.assertTrue(session['login'])
-            self.assertEqual(session['user_id'], 1)
-    
     def test_not_exist_email(self):
         with test_app.test_client() as client:
             body = self.data.copy()

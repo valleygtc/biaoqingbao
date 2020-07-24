@@ -52,11 +52,6 @@ resp:
 """
 @bp_user.route('/api/login', methods=['POST'])
 def handle_login():
-    if session.get('login'):
-        return jsonify({
-            'msg': '用户已登录'
-        })
-    
     data = request.get_json()
     user = User.query.filter_by(email=data['email']).first()
     if not user:
