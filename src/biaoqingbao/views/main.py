@@ -126,7 +126,7 @@ Content-Type: multipart/form-data
 "image": [bytes-file],
 "metadata": [JSON-String] {
     "type": [String],
-    "tags": [Array[String]]，
+    "tags" [Optional]: [Array[String]],
     "group_id" [Optional]: [Number] or null,
 }
 resp: 200, body: {"msg": [String]}
@@ -141,7 +141,7 @@ def add_image():
     image = Image(
         data=image_data,
         type=metadata['type'],
-        tags=[Tag(text=t, user_id=user_id) for t in metadata['tags']],
+        tags=[Tag(text=t, user_id=user_id) for t in metadata.get('tags', [])],
         user_id=user_id
     )
     group_id = metadata.get('group_id')
