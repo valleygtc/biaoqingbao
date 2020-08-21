@@ -1,6 +1,8 @@
+from smtplib import SMTPException
+from datetime import datetime, timedelta
+
 from flask import Blueprint, jsonify, request, session
 from werkzeug.security import generate_password_hash, check_password_hash
-from smtplib import SMTPException
 
 from .. import db
 from ..models import User, Passcode
@@ -124,3 +126,43 @@ def handle_send_passcode():
     return jsonify({
         'msg': '验证码已发送至电子邮箱'
     })
+
+
+"""
+POST {
+    "email": [String],
+    "passcode": [String],
+    "password": [String]
+}
+resp:
+- 200, { "msg": "重置密码成功" }
+- 404, { "error": "用户不存在" }
+- 403, { "error": "验证码错误" }
+"""
+@bp_user.route('/api/reset-password', methods=['POST'])
+def handle_reset_password():
+    data = request.get_json()
+    email = data['email']
+    passcode = data['passcode']
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({
+            'error': '用户不存在',
+        }), 404
+
+    expire_datetime = datetime.now() - timedelta(0, 600)
+    passcodes = Passcode.query\
+        .filter_by(user_id=user.id)\
+        .filter(Passcode.create_at > expire_datetime)\
+        .all()
+    if passcode in [r.content for r in passcodes]:
+        user.password = generate_password_hash(data['password'])
+        db.session.add(user)
+        db.session.commit()
+        return jsonify({
+            'msg': '重置密码成功'
+        })
+    else:
+        return jsonify({
+            'error': '验证码错误'
+        }), 403

@@ -1,11 +1,12 @@
 import unittest
 import json
 from unittest.mock import patch
+from datetime import datetime, timedelta
 
 from flask import session
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
-from biaoqingbao import db, User
+from biaoqingbao import db, User, Passcode
 from tests import test_app, create_login_client
 
 
@@ -183,3 +184,71 @@ class TestSendPasscode(unittest.TestCase):
             self.assertEqual(resp.status_code, 200)
             json_data = resp.get_json()
             self.assertIn('msg', json_data)
+
+
+class TestResetPassword(unittest.TestCase):
+    url = '/api/reset-password'
+
+    data = {
+        'email': '1@foo.com',
+        'passcode': '1234',
+        'password': 'newpassword1',
+    }
+
+    def setUp(self):
+        with test_app.app_context():
+            db.create_all()
+            user = User(
+                email='1@foo.com',
+                password=generate_password_hash('password1'),
+            )
+            normal_passcode = Passcode(content='1234')
+            expired_passcode = Passcode(content='2234', create_at=datetime.now() - timedelta(0, 601))
+            user.passcodes = [normal_passcode, expired_passcode]
+            db.session.add(user)
+            db.session.commit()
+
+
+    def tearDown(self):
+        with test_app.app_context():
+            db.drop_all()
+
+    def test_normal(self):
+        with test_app.test_client() as client:
+            resp = client.post(self.url, json=self.data)
+            self.assertEqual(resp.status_code, 200)
+            json_data = resp.get_json()
+            self.assertIn('msg', json_data)
+
+        with test_app.app_context():
+            self.assertTrue(check_password_hash(
+                User.query.get(1).password,
+                self.data['password'],
+            ))
+
+    def test_user_not_found(self):
+        with test_app.test_client() as client:
+            body = self.data.copy()
+            body['email'] = 'xxx@foo.com'
+            resp = client.post(self.url, json=body)
+            self.assertEqual(resp.status_code, 404)
+            json_data = resp.get_json()
+            self.assertIn('error', json_data)
+
+    def test_passcode_not_found(self):
+        with test_app.test_client() as client:
+            body = self.data.copy()
+            body['passcode'] = '1235'
+            resp = client.post(self.url, json=body)
+            self.assertEqual(resp.status_code, 403)
+            json_data = resp.get_json()
+            self.assertIn('error', json_data)
+
+    def test_passcode_expire(self):
+        with test_app.test_client() as client:
+            body = self.data.copy()
+            body['passcode'] = '2234'
+            resp = client.post(self.url, json=body)
+            self.assertEqual(resp.status_code, 403)
+            json_data = resp.get_json()
+            self.assertIn('error', json_data)
