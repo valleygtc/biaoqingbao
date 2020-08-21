@@ -92,27 +92,42 @@ def handle_logout():
     })
 
 
+def get_legal_passcodes(user_id):
+    expire_datetime = datetime.now() - timedelta(0, 600) # 10 分钟
+    return Passcode.query\
+        .filter_by(user_id=user_id)\
+        .filter(Passcode.create_at > expire_datetime)\
+        .all()
+
+
 """
 POST {
     "email": [String]
 }
 resp:
 - 200, { "msg": "验证码已发送至电子邮箱" }
-- 400, { "error": "邮箱格式错误" }
+- 403, { "error": "已发送过多验证码" }
+- 500, { "error": "发送邮件失败" }
 """
 @bp_user.route('/api/send-passcode', methods=['POST'])
 def handle_send_passcode():
     data = request.get_json()
     email = data['email']
-    u = User.query.filter_by(email=email).first()
-    if not u:
+    user = User.query.filter_by(email=email).first()
+    if not user:
         # TODO：发送邮件通知有人输入此邮箱。http://www.ruanyifeng.com/blog/2019/02/password.html
         return jsonify({
             'msg': '验证码已发送至电子邮箱',
         }), 200
 
+    legal_codes = get_legal_passcodes(user.id)
+    if len(legal_codes) >= 5:
+        return jsonify({
+            'error': '已发送过多验证码',
+        }), 403
+
     passcode = generate_passcode()
-    record = Passcode(content=passcode, user_id=u.id)
+    record = Passcode(content=passcode, user_id=user.id)
     db.session.add(record)
     db.session.commit()
 
@@ -150,12 +165,8 @@ def handle_reset_password():
             'error': '用户不存在',
         }), 404
 
-    expire_datetime = datetime.now() - timedelta(0, 600)
-    passcodes = Passcode.query\
-        .filter_by(user_id=user.id)\
-        .filter(Passcode.create_at > expire_datetime)\
-        .all()
-    if passcode in [r.content for r in passcodes]:
+    legal_codes = get_legal_passcodes(user.id)
+    if passcode in [r.content for r in legal_codes]:
         user.password = generate_password_hash(data['password'])
         db.session.add(user)
         db.session.commit()

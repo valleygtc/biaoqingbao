@@ -185,6 +185,30 @@ class TestSendPasscode(unittest.TestCase):
             json_data = resp.get_json()
             self.assertIn('msg', json_data)
 
+    def test_send_too_many_emails_in_a_short_time(self):
+        with test_app.app_context():
+            user = User(
+                email='2@foo.com',
+                password=generate_password_hash('password2'),
+            )
+            user.passcodes = [
+                Passcode(content='1234'),
+                Passcode(content='2234'),
+                Passcode(content='3234'),
+                Passcode(content='4234'),
+                Passcode(content='5234')
+            ]
+            db.session.add(user)
+            db.session.commit()
+        with test_app.test_client() as client:
+            with patch('biaoqingbao.views.user.send_email') as mock_send_email:
+                resp = client.post(self.url, json={'email': '2@foo.com'})
+                mock_send_email.assert_not_called()
+
+            self.assertEqual(resp.status_code, 403)
+            json_data = resp.get_json()
+            self.assertIn('error', json_data)
+
 
 class TestResetPassword(unittest.TestCase):
     url = '/api/reset-password'
