@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from flask import session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from biaoqingbao import db, User, Passcode
+from biaoqingbao import db, User, Passcode, ResetAttempt
 from tests import test_app, create_login_client
 
 
@@ -272,6 +272,29 @@ class TestResetPassword(unittest.TestCase):
         with test_app.test_client() as client:
             body = self.data.copy()
             body['passcode'] = '2234'
+            resp = client.post(self.url, json=body)
+            self.assertEqual(resp.status_code, 403)
+            json_data = resp.get_json()
+            self.assertIn('error', json_data)
+
+    def test_reset_too_frequently(self):
+        with test_app.app_context():
+            user = User(
+                email='2@foo.com',
+                password=generate_password_hash('password2'),
+            )
+            user.reset_attempts = [
+                ResetAttempt(),
+                ResetAttempt(),
+                ResetAttempt(),
+                ResetAttempt(),
+                ResetAttempt(),
+            ]
+            db.session.add(user)
+            db.session.commit()
+        with test_app.test_client() as client:
+            body = self.data.copy()
+            body['email'] = '2@foo.com'
             resp = client.post(self.url, json=body)
             self.assertEqual(resp.status_code, 403)
             json_data = resp.get_json()

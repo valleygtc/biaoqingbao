@@ -81,3 +81,13 @@ class Passcode(db.Model):
 
     def __repr__(self):
         return '<Passcode %r>' % self.id
+
+
+class ResetAttempt(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey(User.id), nullable=False)
+    user = db.relationship(User, lazy=True, backref=db.backref('reset_attempts', lazy=True, cascade="all,delete"))
+    create_at = db.Column(db.DateTime(), nullable=False, server_default=func.now())
+
+    def __repr__(self):
+        return '<ResetAttempt %r>' % self.id

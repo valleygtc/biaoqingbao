@@ -5,7 +5,7 @@ from flask import Blueprint, jsonify, request, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from .. import db
-from ..models import User, Passcode
+from ..models import User, Passcode, ResetAttempt
 from ..utils import generate_passcode
 from ..service import send_email
 
@@ -106,7 +106,7 @@ POST {
 }
 resp:
 - 200, { "msg": "验证码已发送至电子邮箱" }
-- 403, { "error": "已发送过多验证码" }
+- 403, { "error": "发送验证码过于频繁" }
 - 500, { "error": "发送邮件失败" }
 """
 @bp_user.route('/api/send-passcode', methods=['POST'])
@@ -152,6 +152,7 @@ POST {
 resp:
 - 200, { "msg": "重置密码成功" }
 - 404, { "error": "用户不存在" }
+- 403, { "error": "重置尝试次数过于频繁" }
 - 403, { "error": "验证码错误" }
 """
 @bp_user.route('/api/reset-password', methods=['POST'])
@@ -165,6 +166,18 @@ def handle_reset_password():
             'error': '用户不存在',
         }), 404
 
+    expire_datetime = datetime.now() - timedelta(0, 600) # 10 分钟
+    attempts = ResetAttempt.query\
+        .filter_by(user_id=user.id)\
+        .filter(ResetAttempt.create_at > expire_datetime)\
+        .all()
+    if len(attempts) >= 5:
+        return jsonify({
+            'error': ''
+        }), 403
+
+    a = ResetAttempt(user_id=user.id)
+    db.session.add(a)
     legal_codes = get_legal_passcodes(user.id)
     if passcode in [r.content for r in legal_codes]:
         user.password = generate_password_hash(data['password'])
