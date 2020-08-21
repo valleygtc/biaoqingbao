@@ -50,7 +50,7 @@ class TestRegister(unittest.TestCase):
         with test_app.app_context():
             self.assertTrue(User.query.get(2))
 
-    def test_conflict_email(self):
+    def test_email_already_exists(self):
         client = test_app.test_client()
         body = self.data.copy()
         body['email'] = '1@foo.com'
@@ -93,7 +93,7 @@ class TestLogin(unittest.TestCase):
             self.assertTrue(session['login'])
             self.assertEqual(session['user_id'], 1)
 
-    def test_not_exist_email(self):
+    def test_user_not_exists(self):
         with test_app.test_client() as client:
             body = self.data.copy()
             body['email'] = 'not_exit_email@foo.com'
@@ -178,14 +178,14 @@ class TestSendPasscode(unittest.TestCase):
             json_data = resp.get_json()
             self.assertIn('msg', json_data)
 
-    def test_email_not_found_in_db(self):
+    def test_user_not_exists(self):
         with test_app.test_client() as client:
             resp = client.post(self.url, json={'email': 'xxxx@foo.com'})
             self.assertEqual(resp.status_code, 200)
             json_data = resp.get_json()
             self.assertIn('msg', json_data)
 
-    def test_send_too_many_emails_in_a_short_time(self):
+    def test_send_passcode_too_frequently(self):
         with test_app.app_context():
             user = User(
                 email='2@foo.com',
