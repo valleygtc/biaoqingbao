@@ -21,7 +21,7 @@ def send_email(to_addrs, subject, content):
     """
     email = EmailMessage()
     email['Subject'] = subject
-    email['From'] = EMAIL_USERNAME
+    email['From'] = f'bqb-admin <{EMAIL_USERNAME}>'
     email['To'] = to_addrs
     email.set_content(content)
 
