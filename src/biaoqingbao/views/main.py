@@ -118,7 +118,7 @@ def show_image(image_id):
 
     resp = Response(image.data, mimetype=f'image/{image.type}')
     return resp
-        
+
 
 """
 POST 使用表单提交
@@ -209,12 +209,12 @@ def update_image():
             'error': '图片不存在，可能是其已被删除，请刷新页面。'
         }), 404
 
-    user_id = session['user_id']    
+    user_id = session['user_id']
     if image.user_id != user_id:
         return jsonify({
             'error': '您无移动此图片的权限。',
         }), 403
-    
+
     group_id = data['group_id']
     if group_id is None:
         image.group_id = None
