@@ -1,17 +1,15 @@
-import io
-import zipfile
-from uuid import uuid4
-
-from flask import Blueprint, json, jsonify, request, Response, send_file, session
+from flask import Blueprint, jsonify, request, session
 from werkzeug.security import generate_password_hash, check_password_hash
+from smtplib import SMTPException
 
 from .. import db
-from ..models import Image, Group, Tag, User
+from ..models import User, Passcode
+from ..utils import generate_passcode
+from ..service import send_email
 
 bp_user = Blueprint('bp_user', __name__)
 
 
-# user
 """
 POST {
     "email": [String],
@@ -58,7 +56,7 @@ def handle_login():
         return jsonify({
             'error': '账号或密码错误',
         }), 401
-    
+
     ok = check_password_hash(user.password, data['password'])
     if ok:
         session['login'] = True
@@ -89,4 +87,40 @@ def handle_logout():
     session.pop('user_id')
     return jsonify({
         'msg': '注销成功'
+    })
+
+
+"""
+POST {
+    "email": [String]
+}
+resp:
+- 200, { "msg": "验证码已发送至电子邮箱" }
+- 400, { "error": "邮箱格式错误" }
+"""
+@bp_user.route('/api/send-passcode', methods=['POST'])
+def handle_send_passcode():
+    data = request.get_json()
+    email = data['email']
+    u = User.query.filter_by(email=email).first()
+    if not u:
+        # TODO：发送邮件通知有人输入此邮箱。http://www.ruanyifeng.com/blog/2019/02/password.html
+        return jsonify({
+            'msg': '验证码已发送至电子邮箱',
+        }), 200
+
+    passcode = generate_passcode()
+    record = Passcode(content=passcode, user_id=u.id)
+    db.session.add(record)
+    db.session.commit()
+
+    try:
+        send_email(email, '重设您的“表情宝”账号密码', f'你此次重置密码的验证码为：{passcode}，请在 10 分钟内输入验证码进行下一步操作。 如非你本人操作，请忽略此邮件。')
+    except SMTPException as e:
+        return jsonify({
+            'error': '发送邮件失败'
+        }), 500
+
+    return jsonify({
+        'msg': '验证码已发送至电子邮箱'
     })

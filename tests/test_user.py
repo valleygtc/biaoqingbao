@@ -1,5 +1,6 @@
 import unittest
 import json
+from unittest.mock import patch
 
 from flask import session
 from werkzeug.security import generate_password_hash
@@ -148,3 +149,37 @@ class TestLogout(unittest.TestCase):
 
             self.assertFalse(session.get('login'))
             self.assertFalse(session.get('user_id'))
+
+
+class TestSendPasscode(unittest.TestCase):
+    url = '/api/send-passcode'
+
+    data = {
+        'email': '1@foo.com',
+    }
+
+    def setUp(self):
+        with test_app.app_context():
+            db.create_all()
+            fake_records(1)
+
+    def tearDown(self):
+        with test_app.app_context():
+            db.drop_all()
+
+    def test_normal(self):
+        with test_app.test_client() as client:
+            with patch('biaoqingbao.views.user.send_email') as mock_send_email:
+                resp = client.post(self.url, json=self.data)
+                mock_send_email.assert_called_once()
+
+            self.assertEqual(resp.status_code, 200)
+            json_data = resp.get_json()
+            self.assertIn('msg', json_data)
+
+    def test_email_not_found_in_db(self):
+        with test_app.test_client() as client:
+            resp = client.post(self.url, json={'email': 'xxxx@foo.com'})
+            self.assertEqual(resp.status_code, 200)
+            json_data = resp.get_json()
+            self.assertIn('msg', json_data)

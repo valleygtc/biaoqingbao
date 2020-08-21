@@ -70,3 +70,14 @@ class Tag(db.Model):
 
     def __repr__(self):
         return '<Tag %r>' % self.id
+
+
+class Passcode(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.String(64), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey(User.id), nullable=False)
+    user = db.relationship(User, lazy=True, backref=db.backref('passcodes', lazy=True, cascade="all,delete"))
+    create_at = db.Column(db.DateTime(), nullable=False, server_default=func.now())
+
+    def __repr__(self):
+        return '<Passcode %r>' % self.id
