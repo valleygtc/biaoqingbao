@@ -26,11 +26,11 @@ class TestShowTags(unittest.TestCase):
             user.images = [img]
             db.session.add(user)
             db.session.commit()
-    
+
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
-    
+
     def test_show_all(self):
         client = create_login_client(user_id=1)
         resp = client.get(
@@ -68,7 +68,7 @@ class TestAddTags(unittest.TestCase):
             user.images = [img]
             db.session.add(user)
             db.session.commit()
-    
+
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
@@ -90,7 +90,7 @@ class TestAddTags(unittest.TestCase):
             tag = Tag.query.get(json_data['id'])
             self.assertIsNotNone(tag)
             self.assertEqual(tag.text, 'addedTag1')
-    
+
     def test_tag_other_users_image(self):
         # setup
         with test_app.app_context():
@@ -100,7 +100,7 @@ class TestAddTags(unittest.TestCase):
             )
             db.session.add(user)
             db.session.commit()
-        
+
         # test
         client = create_login_client(user_id=2)
         resp = client.post(self.url, json={
@@ -130,7 +130,7 @@ class TestDeleteTag(unittest.TestCase):
             user.images = [img]
             db.session.add(user)
             db.session.commit()
-    
+
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
@@ -150,7 +150,7 @@ class TestDeleteTag(unittest.TestCase):
         with test_app.app_context():
             tag = Tag.query.get(1)
             self.assertIs(tag, None)
-    
+
     def test_delete_other_users_tag(self):
         # setup
         with test_app.app_context():
@@ -160,7 +160,7 @@ class TestDeleteTag(unittest.TestCase):
             )
             db.session.add(user)
             db.session.commit()
-        
+
         # test
         client = create_login_client(user_id=2)
         resp = client.post(
@@ -192,7 +192,7 @@ class TestUpdateTag(unittest.TestCase):
             user.images = [img]
             db.session.add(user)
             db.session.commit()
-    
+
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
@@ -213,7 +213,7 @@ class TestUpdateTag(unittest.TestCase):
         with test_app.app_context():
             tag = Tag.query.get(1)
             self.assertEqual(tag.text, 'updatedTag')
-    
+
     def test_update_other_users_tag(self):
         # setup
         with test_app.app_context():
@@ -223,7 +223,7 @@ class TestUpdateTag(unittest.TestCase):
             )
             db.session.add(user)
             db.session.commit()
-        
+
         # test
         client = create_login_client(user_id=2)
         resp = client.post(

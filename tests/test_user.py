@@ -30,7 +30,7 @@ class TestRegister(unittest.TestCase):
         with test_app.app_context():
             db.create_all()
             fake_records(1)
-    
+
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
@@ -47,7 +47,7 @@ class TestRegister(unittest.TestCase):
         # 验证已插入数据库
         with test_app.app_context():
             self.assertTrue(User.query.get(2))
-    
+
     def test_conflict_email(self):
         client = test_app.test_client()
         body = self.data.copy()
@@ -73,7 +73,7 @@ class TestLogin(unittest.TestCase):
         with test_app.app_context():
             db.create_all()
             fake_records(1)
-    
+
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
@@ -90,7 +90,7 @@ class TestLogin(unittest.TestCase):
 
             self.assertTrue(session['login'])
             self.assertEqual(session['user_id'], 1)
-    
+
     def test_not_exist_email(self):
         with test_app.test_client() as client:
             body = self.data.copy()
@@ -120,7 +120,7 @@ class TestLogin(unittest.TestCase):
 
             self.assertFalse(session.get('login'))
             self.assertIsNone(session.get('user_id'))
-    
+
 
 class TestLogout(unittest.TestCase):
     url = '/api/logout'
@@ -134,7 +134,7 @@ class TestLogout(unittest.TestCase):
         with test_app.app_context():
             db.create_all()
             fake_records(1)
-    
+
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()

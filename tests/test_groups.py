@@ -29,7 +29,7 @@ class TestShowGroups(unittest.TestCase):
             user.groups = [group1, group2, group3]
             db.session.add(user)
             db.session.commit()
-    
+
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
@@ -55,7 +55,7 @@ class TestAddGroup(unittest.TestCase):
             )
             db.session.add(user)
             db.session.commit()
-    
+
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
@@ -105,7 +105,7 @@ class TestDeleteGroup(unittest.TestCase):
             group.images = [img1, img2]
             db.session.add(user)
             db.session.commit()
-    
+
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
@@ -125,7 +125,7 @@ class TestDeleteGroup(unittest.TestCase):
             # 验证 cascade delete：
             self.assertFalse(Image.query.get(1))
             self.assertFalse(Image.query.get(2))
-    
+
     def test_delete_not_exists_group(self):
         client = create_login_client()
         resp = client.post(
@@ -135,7 +135,7 @@ class TestDeleteGroup(unittest.TestCase):
         self.assertEqual(resp.status_code, 404)
         json_data = resp.get_json()
         self.assertIn('error', json_data)
-    
+
     def test_delete_other_users_group(self):
         # setup
         with test_app.app_context():
@@ -145,7 +145,7 @@ class TestDeleteGroup(unittest.TestCase):
             )
             db.session.add(user)
             db.session.commit()
-        
+
         # test
         client = create_login_client(user_id=2)
         resp = client.post(
@@ -173,7 +173,7 @@ class TestUpdateGroup(unittest.TestCase):
             user.groups = [group1]
             db.session.add(user)
             db.session.commit()
-    
+
     def tearDown(self):
         with test_app.app_context():
             db.drop_all()
@@ -194,7 +194,7 @@ class TestUpdateGroup(unittest.TestCase):
         with test_app.app_context():
             record = Group.query.get(1)
             self.assertEqual(record.name, 'updatedGroup')
-    
+
     def test_rename_others_group(self):
         # setup
         with test_app.app_context():
@@ -204,7 +204,7 @@ class TestUpdateGroup(unittest.TestCase):
             )
             db.session.add(user)
             db.session.commit()
-        
+
         # test
         client = create_login_client(user_id=2)
         resp = client.post(
