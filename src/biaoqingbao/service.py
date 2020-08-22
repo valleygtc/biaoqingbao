@@ -1,5 +1,5 @@
 from email.message import EmailMessage
-from smtplib import SMTP
+from smtplib import SMTP_SSL
 
 from .configs import (
     EMAIL_HOST,
@@ -26,7 +26,7 @@ def send_email(to_addrs, subject, content):
     email.set_content(content)
 
     TIMEOUT = 2
-    with SMTP('smtpdm.aliyun.com', timeout=TIMEOUT) as client:
+    with SMTP_SSL('smtpdm.aliyun.com', timeout=TIMEOUT) as client:
         client.login(EMAIL_USERNAME, EMAIL_PASSWORD)
         errors = client.send_message(email)
 
