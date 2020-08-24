@@ -117,6 +117,8 @@ def show_image(image_id):
         }), 403
 
     resp = Response(image.data, mimetype=f'image/{image.type}')
+    resp.cache_control.public = True
+    resp.cache_control.max_age = 31536000
     return resp
 
 
