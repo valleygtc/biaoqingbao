@@ -9,7 +9,11 @@
 - 图片导入导出。
 
 ## 自动部署：
-TODO：pyinfra
+```
+$ python setup.py sdist
+$ cd deploy
+$ pyinfra -v inventory.py update.py
+```
 
 ## 手动部署：
 依赖：
