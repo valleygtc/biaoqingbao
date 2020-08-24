@@ -63,6 +63,10 @@ def handle_login():
     if ok:
         session['login'] = True
         session['user_id'] = user.id
+        # default 31 days
+        # config: PERMANENT_SESSION_LIFETIME
+        # https://flask.palletsprojects.com/en/1.1.x/api/#sessions
+        session.permanent = True
         return jsonify({
             'msg': '登陆成功'
         })
