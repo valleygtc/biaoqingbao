@@ -7,13 +7,19 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from .. import db
 from ..models import Image, Group, Tag, User
+from ..auth import decode_token
 
 bp_main = Blueprint('bp_main', __name__)
 
 
 @bp_main.before_request
 def handle_authen():
-    if not session.get('login') or not session.get('user_id'):
+    try:
+        token = request.cookies['token']
+        session = decode_token(token)
+        assert 'user_id' in session
+        request.session = session
+    except:
         return jsonify({
             'error': '用户未登录',
         }), 401
@@ -54,7 +60,7 @@ resp: 200, body:
 """
 @bp_main.route('/api/images/')
 def show_images():
-    user_id = session['user_id']
+    user_id = request.session['user_id']
     query = Image.query.filter_by(user_id=user_id)
 
     # apply search
@@ -111,7 +117,7 @@ body: 图片二进制数据
 @bp_main.route('/api/images/<int:image_id>')
 def show_image(image_id):
     image = Image.query.get(image_id)
-    if image.user_id != session['user_id']:
+    if image.user_id != request.session['user_id']:
         return jsonify({
             'error': '您没有访问此图片的权限'
         }), 403
@@ -135,7 +141,7 @@ resp: 200, body: {"msg": [String]}
 """
 @bp_main.route('/api/images/add', methods=['POST'])
 def add_image():
-    user_id = session['user_id']
+    user_id = request.session['user_id']
     image_file = request.files['image']
     image_data = image_file.read()
     image_file.close()
@@ -182,7 +188,7 @@ def delete_image():
         return jsonify({
             'error': '图片不存在，可能是其已被删除，请刷新页面。',
         }), 404
-    elif image.user_id != session['user_id']:
+    elif image.user_id != request.session['user_id']:
         return jsonify({
             'error': '您没有删除此图片的权限',
         }), 403
@@ -211,7 +217,7 @@ def update_image():
             'error': '图片不存在，可能是其已被删除，请刷新页面。'
         }), 404
 
-    user_id = session['user_id']
+    user_id = request.session['user_id']
     if image.user_id != user_id:
         return jsonify({
             'error': '您无移动此图片的权限。',
@@ -252,7 +258,7 @@ resp: 200, body:
 """
 @bp_main.route('/api/tags/')
 def show_tags():
-    query = Tag.query.filter_by(user_id=session['user_id'])
+    query = Tag.query.filter_by(user_id=request.session['user_id'])
     image_id = request.args.get('image_id')
     if image_id:
         query = query.filter_by(image_id=image_id)
@@ -273,7 +279,7 @@ resp: 200, body: {"id": [Number]}
 """
 @bp_main.route('/api/tags/add', methods=['POST'])
 def add_tags():
-    user_id = session['user_id']
+    user_id = request.session['user_id']
     data = request.get_json()
     image_id = data['image_id']
     image = Image.query.get(image_id)
@@ -309,7 +315,7 @@ def delete_tag():
         return jsonify({
             'error': '目标标签不存在，可能是其已被删除，请刷新页面。'
         }), 404
-    elif tag.user_id != session['user_id']:
+    elif tag.user_id != request.session['user_id']:
         return jsonify({
             'error': '您无删除此标签的权限。'
         }), 403
@@ -337,7 +343,7 @@ def update_tag():
         return jsonify({
             'error': '目标标签不存在，可能是其已被删除，请刷新页面。'
         }), 404
-    elif tag.user_id != session['user_id']:
+    elif tag.user_id != request.session['user_id']:
         return jsonify({
             'error': '您无修改此标签的权限。'
         }), 403
@@ -359,7 +365,7 @@ resp: 200, body:
 """
 @bp_main.route('/api/groups/')
 def show_groups():
-    groups = Group.query.filter_by(user_id=session['user_id']).order_by(Group.create_at).all()
+    groups = Group.query.filter_by(user_id=request.session['user_id']).order_by(Group.create_at).all()
     resp = {
         'data': [{'id': r.id, 'name': r.name} for r in groups],
     }
@@ -376,7 +382,7 @@ resp: 200, body: {"id": [int]}
 def add_group():
     data = request.get_json()
     name = data['name']
-    record = Group(name=name, user_id=session['user_id'])
+    record = Group(name=name, user_id=request.session['user_id'])
     db.session.add(record)
     db.session.commit()
     return jsonify({
@@ -401,7 +407,7 @@ def delete_group():
             return jsonify({
                 'error': err
             }), 404
-        elif group.user_id != session['user_id']:
+        elif group.user_id != request.session['user_id']:
             err = f'您无删除组（id={id}）的权限。'
             return jsonify({
                 'error': err
@@ -428,7 +434,7 @@ def update_group():
     group_id = data['id']
     name = data['name']
     group = Group.query.get(group_id)
-    if group.user_id == session['user_id']:
+    if group.user_id == request.session['user_id']:
         group.name = name
         db.session.commit()
         return jsonify({
@@ -447,7 +453,7 @@ resp: 200, body: serve export.zip file.
 @bp_main.route('/api/images/export')
 def export_images():
     buffer = io.BytesIO()
-    images = Image.query.filter_by(user_id=session['user_id']).all()
+    images = Image.query.filter_by(user_id=request.session['user_id']).all()
     with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as fh:
         for image in images:
             fileinfo = zipfile.ZipInfo(

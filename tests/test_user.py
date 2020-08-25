@@ -3,11 +3,10 @@ import json
 from unittest.mock import patch
 from datetime import datetime, timedelta
 
-from flask import session
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from biaoqingbao import db, User, Passcode, ResetAttempt
-from tests import test_app, create_login_client
+from tests import test_app, create_login_client, get_cookies
 
 
 def fake_records(n):
@@ -89,9 +88,8 @@ class TestLogin(unittest.TestCase):
             self.assertEqual(resp.status_code, 200)
             json_data = resp.get_json()
             self.assertIn('msg', json_data)
-
-            self.assertTrue(session['login'])
-            self.assertEqual(session['user_id'], 1)
+            cookies = get_cookies(client)
+            self.assertIn('token', cookies)
 
     def test_user_not_exists(self):
         with test_app.test_client() as client:
@@ -104,9 +102,8 @@ class TestLogin(unittest.TestCase):
             self.assertEqual(resp.status_code, 401)
             json_data = resp.get_json()
             self.assertIn('error', json_data)
-
-            self.assertFalse(session.get('login'))
-            self.assertIsNone(session.get('user_id'))
+            cookies = get_cookies(client)
+            self.assertNotIn('token', cookies)
 
     def test_password_wrong(self):
         with test_app.test_client() as client:
@@ -119,9 +116,8 @@ class TestLogin(unittest.TestCase):
             self.assertEqual(resp.status_code, 401)
             json_data = resp.get_json()
             self.assertIn('error', json_data)
-
-            self.assertFalse(session.get('login'))
-            self.assertIsNone(session.get('user_id'))
+            cookies = get_cookies(client)
+            self.assertNotIn('token', cookies)
 
 
 class TestLogout(unittest.TestCase):
@@ -147,9 +143,12 @@ class TestLogout(unittest.TestCase):
             self.assertEqual(resp.status_code, 200)
             json_data = resp.get_json()
             self.assertIn('msg', json_data)
-
-            self.assertFalse(session.get('login'))
-            self.assertFalse(session.get('user_id'))
+            cookies = get_cookies(client)
+            self.assertTrue(
+                'token' not in cookies
+                or
+                cookies['token'].is_expired()
+            )
 
 
 class TestSendPasscode(unittest.TestCase):

@@ -32,7 +32,7 @@ setup(
     package_dir={'': 'src'},
     packages=find_packages(where='src'),
     python_requires='>=3.6',
-    install_requires=['flask', 'flask-sqlalchemy', 'psycopg2', 'waitress'],
+    install_requires=['flask', 'flask-sqlalchemy', 'psycopg2', 'waitress', 'PyJWT'],
     extras_require={
         'dev': ['pylint', 'rope'],
     },

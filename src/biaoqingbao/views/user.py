@@ -1,13 +1,14 @@
 from smtplib import SMTPException
 from datetime import datetime, timedelta
 
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, jsonify, request
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from .. import db
 from ..models import User, Passcode, ResetAttempt
 from ..utils import generate_passcode
 from ..service import send_email
+from ..auth import generate_token
 
 bp_user = Blueprint('bp_user', __name__)
 
@@ -61,15 +62,17 @@ def handle_login():
 
     ok = check_password_hash(user.password, data['password'])
     if ok:
-        session['login'] = True
-        session['user_id'] = user.id
-        # default 31 days
-        # config: PERMANENT_SESSION_LIFETIME
-        # https://flask.palletsprojects.com/en/1.1.x/api/#sessions
-        session.permanent = True
-        return jsonify({
+        token = generate_token({ 'user_id': user.id })
+        resp = jsonify({
             'msg': '登陆成功'
         })
+        resp.set_cookie(
+            'token',
+            token,
+            expires=datetime.utcnow() + timedelta(days=14),
+            httponly=True,
+        )
+        return resp
     else:
         return jsonify({
             'error': '账号或密码错误',
@@ -80,20 +83,19 @@ def handle_login():
 GET
 resp:
 - if ok: 200, body: {"msg": [String]}
-- else: 401 Unauthorized，body: {"error": [String]}
 """
 @bp_user.route('/api/logout')
 def handle_logout():
-    if not session.get('login'):
-        return jsonify({
-        'error': '用户未登录',
-        }), 401
-
-    session.pop('login')
-    session.pop('user_id')
-    return jsonify({
+    resp = jsonify({
         'msg': '注销成功'
     })
+    resp.set_cookie(
+        'token',
+        '',
+        expires=datetime.fromtimestamp(0),
+        httponly=True,
+    )
+    return resp
 
 
 def get_legal_passcodes(user_id):
