@@ -546,13 +546,26 @@ class TestExportImages(unittest.TestCase):
                 email='1@foo.com',
                 password=generate_password_hash('password1'),
             )
-            for _ in range(20):
+            for _ in range(10):
                 img = Image(
                     data=b'fake binary data',
                     type='jpeg',
                     tags=[Tag(text='aTag', user=user), Tag(text='bTag', user=user)]
                 )
                 user.images.append(img)
+
+            group = Group(
+                name=f'testGroup',
+                user=user,
+            )
+            for _ in range(5):
+                img = Image(
+                    data=b'fake binary data',
+                    type='jpeg',
+                    user=user,
+                    group=group,
+                    tags=[Tag(text='aTag', user=user), Tag(text='bTag', user=user)],
+                )
             db.session.add(user)
             db.session.commit()
 
@@ -560,7 +573,14 @@ class TestExportImages(unittest.TestCase):
         with test_app.app_context():
             db.drop_all()
 
-    def test_default(self):
+    def test_export_all(self):
         client = create_login_client()
         resp = client.get(self.url)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_export_group(self):
+        client = create_login_client()
+        resp = client.get(self.url, query_string={
+            'group_id': 1,
+        })
         self.assertEqual(resp.status_code, 200)

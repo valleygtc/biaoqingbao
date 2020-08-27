@@ -447,13 +447,17 @@ def update_group():
 
 
 """
-GET
+GET ?group_id=<int>
 resp: 200, body: serve export.zip file.
 """
 @bp_main.route('/api/images/export')
 def export_images():
+    group_id = request.args.get('group_id')
+    query = Image.query.filter_by(user_id=request.session['user_id'])
+    if group_id:
+        query = query.filter_by(group_id=int(group_id))
+    images = query.all()
     buffer = io.BytesIO()
-    images = Image.query.filter_by(user_id=request.session['user_id']).all()
     with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as fh:
         for image in images:
             fileinfo = zipfile.ZipInfo(
