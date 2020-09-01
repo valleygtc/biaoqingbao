@@ -36,6 +36,7 @@ GET
 分页：后端实现，使用url参数?page=[int]&per_page=[int]
 - page: 可选，默认为 1。
 - per_page：可选，默认为 20。
+排序：默认按创建时间倒序，传 ?asc_order=1 参数指示正序。
 
 resp: 200, body:
 {
@@ -81,11 +82,12 @@ def show_images():
             .join(Image.tags)\
             .filter(Tag.text.contains(tag))
 
-    # apply pagination
+    # apply pagination, order
     DEFAULT_PER_PAGE = 20
     page = int(request.args.get('page', default=1))
     per_page = int(request.args.get('per_page', default=DEFAULT_PER_PAGE))
-    paginate = query.order_by(Image.create_at)\
+    asc_order = request.args.get('asc_order')
+    paginate = query.order_by(Image.create_at if asc_order else Image.create_at.desc())\
                     .paginate(page=page, per_page=per_page)
     data = [
         {
