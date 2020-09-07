@@ -21,7 +21,7 @@ def handle_authen():
         request.session = session
     except:
         return jsonify({
-            'error': '用户未登录',
+            'error': '请先登录',
         }), 401
     else:
         return
@@ -159,7 +159,7 @@ def add_image():
         group = Group.query.get(group_id)
         if group is None:
             return jsonify({
-                'error': '所选组不存在。'
+                'error': '所选组不存在，请刷新页面后重试'
             }), 400
         elif group.user_id != user_id:
             return jsonify({
@@ -188,7 +188,7 @@ def delete_image():
     image = Image.query.get(image_id)
     if image is None:
         return jsonify({
-            'error': '图片不存在，可能是其已被删除，请刷新页面。',
+            'error': '所选图片不存在，请刷新页面',
         }), 404
     elif image.user_id != request.session['user_id']:
         return jsonify({
@@ -216,13 +216,13 @@ def update_image():
     image = Image.query.get(image_id)
     if not image:
         return jsonify({
-            'error': '图片不存在，可能是其已被删除，请刷新页面。'
+            'error': '所选图片不存在，请刷新页面'
         }), 404
 
     user_id = request.session['user_id']
     if image.user_id != user_id:
         return jsonify({
-            'error': '您无移动此图片的权限。',
+            'error': '您无移动此图片的权限',
         }), 403
 
     group_id = data['group_id']
@@ -230,23 +230,23 @@ def update_image():
         image.group_id = None
         db.session.commit()
         return jsonify({
-            'msg': '成功将图片移至组“全部”。'
+            'msg': '成功将图片移至组“全部”'
         })
     else:
         group = Group.query.get(group_id)
         if not group:
             return jsonify({
-                'error': '所选组不存在，可能是其已被删除，请刷新页面。'
+                'error': '所选组不存在，请刷新页面后重试'
             }), 404
         elif group.user_id != user_id:
             return jsonify({
-                'error': '您无将图片移至此组的权限。'
+                'error': '您无将图片移至此组的权限'
             }), 403
         else:
             image.group = group
             db.session.commit()
             return jsonify({
-                'msg': f'成功将图片移至组“{group.name}”。'
+                'msg': f'成功将图片移至组“{group.name}”'
             })
 
 
@@ -287,11 +287,11 @@ def add_tags():
     image = Image.query.get(image_id)
     if image is None:
         return jsonify({
-            'error': '目标图片不存在，可能是其已被删除，请刷新页面。'
+            'error': '目标图片不存在，请刷新页面后重试'
         }), 404
     elif image.user_id != user_id:
         return jsonify({
-            'error': '您无给目标图片打标签的权限。'
+            'error': '您无给此图片打标签的权限'
         }), 403
     else:
         record = Tag(text=data['text'], image_id=image_id, user_id=user_id)
@@ -315,11 +315,11 @@ def delete_tag():
     tag = Tag.query.get(tag_id)
     if tag is None:
         return jsonify({
-            'error': '目标标签不存在，可能是其已被删除，请刷新页面。'
+            'error': '所选标签不存在，请刷新页面'
         }), 404
     elif tag.user_id != request.session['user_id']:
         return jsonify({
-            'error': '您无删除此标签的权限。'
+            'error': '您无删除此标签的权限'
         }), 403
     else:
         db.session.delete(tag)
@@ -343,17 +343,17 @@ def update_tag():
     tag = Tag.query.get(tag_id)
     if tag is None:
         return jsonify({
-            'error': '目标标签不存在，可能是其已被删除，请刷新页面。'
+            'error': '所选标签不存在，请刷新页面后重试'
         }), 404
     elif tag.user_id != request.session['user_id']:
         return jsonify({
-            'error': '您无修改此标签的权限。'
+            'error': '您无修改此标签的权限'
         }), 403
     else:
         tag.text = data['text']
         db.session.commit()
         return jsonify({
-            'msg': '成功将目标标签重命名'
+            'msg': '成功将标签重命名'
         })
 
 
@@ -405,21 +405,19 @@ def delete_group():
     for id in group_ids:
         group = Group.query.get(id)
         if not group:
-            err = f'组（id={id}）不存在，可能是其已被删除，请刷新页面。'
             return jsonify({
-                'error': err
+                'error': '所选组不存在，请刷新页面'
             }), 404
         elif group.user_id != request.session['user_id']:
-            err = f'您无删除组（id={id}）的权限。'
             return jsonify({
-                'error': err
+                'error': '您无删除此组的权限'
             }), 403
         else:
             db.session.delete(group)
 
     db.session.commit()
     return jsonify({
-        'msg': f'成功删除组（ids={group_ids}）'
+        'msg': f'成功删除所选组'
     })
 
 
@@ -440,11 +438,11 @@ def update_group():
         group.name = name
         db.session.commit()
         return jsonify({
-            'msg': '成功重命名组。',
+            'msg': '成功重命名组',
         })
     else:
         return jsonify({
-            'error': '您无重命名此组的权限。',
+            'error': '您无重命名此组的权限',
         }), 403
 
 
