@@ -1,6 +1,7 @@
 from biaoqingbao import create_app, generate_token
 
 test_app = create_app()
+test_app.config['TESTING'] = True
 
 def create_login_client(user_id=1):
     client = test_app.test_client()
