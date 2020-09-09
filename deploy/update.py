@@ -26,7 +26,7 @@ server.shell(
 
 server.shell(
   name='Install biaoqingbao',
-  commands=[f'. .venv/bin/activate && pip install {filename}'],
+  commands=[f'. .venv/bin/activate && pip install {filename}[deploy]'],
   chdir=repo_dir,
 )
 

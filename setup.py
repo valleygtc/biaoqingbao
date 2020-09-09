@@ -35,6 +35,7 @@ setup(
     install_requires=['flask', 'flask-sqlalchemy', 'psycopg2', 'waitress', 'PyJWT'],
     extras_require={
         'dev': ['pylint', 'rope'],
+        'deploy': ['gunicorn'],
     },
     entry_points={
         'console_scripts': [
