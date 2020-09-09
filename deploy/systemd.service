@@ -1,0 +1,11 @@
+[Unit]
+Description=biaoqingbao backend service.
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/www/biaoqingbao
+Environment="PATH=/opt/www/biaoqingbao/.venv/bin"
+ExecStart=/bin/bash run.sh
+
+[Install]
+WantedBy=multi-user.target
