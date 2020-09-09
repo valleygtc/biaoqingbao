@@ -53,7 +53,7 @@ $ source .venv/bin/activate
 $ pip install --editable .[dev]
 
 # ENV
-$ cp env.sh.example env.sh
+$ cp env.dev.sh.example env.sh
 $ vi env.sh # 填写好程序运行所需环境变量。
 $ source env.sh # 读入环境变量。
 
@@ -64,9 +64,7 @@ $ biaoqingbao create-table
 $ flask run
 ```
 
-前端：
-
-见：https://github.com/valleygtc/biaoqingbao-frontend
+前端代码仓库：https://github.com/valleygtc/biaoqingbao-frontend
 
 ## 构建与发布：
 TODO：docker
