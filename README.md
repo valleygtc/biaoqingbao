@@ -1,5 +1,5 @@
-## 简介
-“表情宝”后端，地址：[https://bqb.plus](https://bqb.plus)
+# 表情宝
+在线地址：[bqb.plus](https://bqb.plus)
 
 功能：
 - 图片浏览、分享。
@@ -8,18 +8,11 @@
 - 图片分组。
 - 图片导入导出。
 
-## 依赖：
+## 部署：
+### 依赖：
 - postgresql
 
-## 自动部署：
-更新：
-```
-$ python setup.py sdist
-$ cd deploy
-$ pyinfra -v inventory.py update.py
-```
-
-## 手动部署：
+### 手动部署：
 ```bash
 $ python3 setup.py sdist
 $ scp dist/biaoqingbao-x.x.x.tar.gz <user>@<host>:/opt/www/biaoqingbao
@@ -36,6 +29,13 @@ $ source env.sh
 
 $ biaoqingbao create-table
 $ biaoqingbao run
+```
+
+### 自动更新：
+```
+$ python setup.py sdist
+$ cd deploy
+$ pyinfra -v inventory.py update.py
 ```
 
 ## 开发：
@@ -62,7 +62,4 @@ $ biaoqingbao create-table
 $ flask run
 ```
 
-前端代码仓库：https://github.com/valleygtc/biaoqingbao-frontend
-
-## 构建与发布：
-TODO：docker
+前端代码仓库：[biaoqingbao-frontend](https://github.com/valleygtc/biaoqingbao-frontend)
