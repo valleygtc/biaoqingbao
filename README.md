@@ -8,6 +8,11 @@
 - 图片分组。
 - 图片导入导出。
 
+## 应用截图：
+<div align="center">
+    <img src="./assets/compose.png" alt="应用截图">
+</div>
+
 ## 部署：
 ### 依赖：
 - postgresql
