@@ -466,4 +466,4 @@ def export_images():
             )
             fh.writestr(fileinfo, image.data)
     buffer.seek(0)
-    return send_file(buffer, as_attachment=True, attachment_filename='export.zip')
+    return send_file(buffer, as_attachment=True, download_name='export.zip')
