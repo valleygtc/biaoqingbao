@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "biaoqingbao"
+version = "0.1.0"
+description = "Image manager with web UI"
+authors = ["gutianci <gutianci@qq.com>"]
+license = "GPLv3"
+readme = "README.md"
+
+[tool.poetry.scripts]
+biaoqingbao = 'biaoqingbao:cli'
+
+[tool.poetry.dependencies]
+python = "^3.8"
+flask = "^2.2.2"
+flask-sqlalchemy = "^3.0.2"
+psycopg2 = "^2.9.5"
+pyjwt = "^2.6.0"
+waitress = "^2.1.2"
+
+[[tool.poetry.source]]
+name = "tsinghua"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
+secondary = false
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.2.0"
+mypy = "^0.982"
+black = "^22.10.0"
+
+[tool.poetry.group.prod]
+optional = true
+
+[tool.poetry.group.prod.dependencies]
+gunicorn = "^20.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
