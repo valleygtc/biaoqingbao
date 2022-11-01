@@ -1,3 +1,3 @@
 hosts = [
-    'bqb.plus',
+    "bqb.plus",
 ]

@@ -3,9 +3,9 @@ import os
 import click
 from waitress import serve
 
-from .version import __version__
 from .create_app import create_app
 from .models import db
+from .version import __version__
 
 
 @click.group()
@@ -30,9 +30,9 @@ def drop_all():
         db.drop_all()
 
 
-@cli.command('run')
-@click.option('--port', default=5000, help='Network port to listen to.')
+@cli.command("run")
+@click.option("--port", default=5000, help="Network port to listen to.")
 def run(port):
     """Run biaoqingbao server."""
     app = create_app()
-    serve(app, host='127.0.0.1', port=port)
+    serve(app, host="127.0.0.1", port=port)

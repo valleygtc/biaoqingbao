@@ -1,27 +1,27 @@
-import unittest
 import json
+import unittest
 from io import BytesIO
 
 from werkzeug.security import generate_password_hash
 
-from biaoqingbao import db, Image, Tag, User
-from tests import test_app, create_login_client
+from biaoqingbao import Image, Tag, User, db
+from tests import create_login_client, test_app
 
 
 class TestShowTags(unittest.TestCase):
-    url = '/api/tags/'
+    url = "/api/tags/"
 
     def setUp(self):
         with test_app.app_context():
             db.create_all()
             user = User(
-                email='1@foo.com',
-                password=generate_password_hash('password1'),
+                email="1@foo.com",
+                password=generate_password_hash("password1"),
             )
             img = Image(
-                data=b'abcdefggggggg',
-                type='jpeg',
-                tags=[Tag(text='aTag', user=user), Tag(text='bTag', user=user)],
+                data=b"abcdefggggggg",
+                type="jpeg",
+                tags=[Tag(text="aTag", user=user), Tag(text="bTag", user=user)],
             )
             user.images = [img]
             db.session.add(user)
@@ -38,32 +38,29 @@ class TestShowTags(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
-        self.assertIn('data', json_data)
+        self.assertIn("data", json_data)
 
     def test_show_image_tags(self):
         client = create_login_client(user_id=1)
-        resp = client.get(
-            self.url,
-            query_string={'image_id': 1}
-        )
+        resp = client.get(self.url, query_string={"image_id": 1})
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
-        self.assertIn('data', json_data)
+        self.assertIn("data", json_data)
 
 
 class TestAddTags(unittest.TestCase):
-    url = '/api/tags/add'
+    url = "/api/tags/add"
 
     def setUp(self):
         with test_app.app_context():
             db.create_all()
             user = User(
-                email='1@foo.com',
-                password=generate_password_hash('password1'),
+                email="1@foo.com",
+                password=generate_password_hash("password1"),
             )
             img = Image(
-                data=b'abcdefggggggg',
-                type='jpeg',
+                data=b"abcdefggggggg",
+                type="jpeg",
             )
             user.images = [img]
             db.session.add(user)
@@ -75,57 +72,48 @@ class TestAddTags(unittest.TestCase):
 
     def test_default(self):
         client = create_login_client(user_id=1)
-        resp = client.post(
-            self.url,
-            json={
-                'image_id': 1,
-                'text': 'addedTag1'
-            }
-        )
+        resp = client.post(self.url, json={"image_id": 1, "text": "addedTag1"})
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
-        self.assertIn('id', json_data)
+        self.assertIn("id", json_data)
         # 验证已插入数据库
         with test_app.app_context():
-            tag = Tag.query.get(json_data['id'])
+            tag = Tag.query.get(json_data["id"])
             self.assertIsNotNone(tag)
-            self.assertEqual(tag.text, 'addedTag1')
+            self.assertEqual(tag.text, "addedTag1")
 
     def test_tag_other_users_image(self):
         # setup
         with test_app.app_context():
             user = User(
-                email='2@foo.com',
-                password=generate_password_hash('password2'),
+                email="2@foo.com",
+                password=generate_password_hash("password2"),
             )
             db.session.add(user)
             db.session.commit()
 
         # test
         client = create_login_client(user_id=2)
-        resp = client.post(self.url, json={
-            'image_id': 1,
-            'text': 'addedTag1'
-        })
+        resp = client.post(self.url, json={"image_id": 1, "text": "addedTag1"})
         self.assertEqual(resp.status_code, 403)
         json_data = resp.get_json()
-        self.assertIn('error', json_data)
+        self.assertIn("error", json_data)
 
 
 class TestDeleteTag(unittest.TestCase):
-    url = '/api/tags/delete'
+    url = "/api/tags/delete"
 
     def setUp(self):
         with test_app.app_context():
             db.create_all()
             user = User(
-                email='1@foo.com',
-                password=generate_password_hash('password1'),
+                email="1@foo.com",
+                password=generate_password_hash("password1"),
             )
             img = Image(
-                data=b'abcdefggggggg',
-                type='jpeg',
-                tags=[Tag(text='aTag', user=user)],
+                data=b"abcdefggggggg",
+                type="jpeg",
+                tags=[Tag(text="aTag", user=user)],
             )
             user.images = [img]
             db.session.add(user)
@@ -140,12 +128,12 @@ class TestDeleteTag(unittest.TestCase):
         resp = client.post(
             self.url,
             json={
-                'id': 1,
-            }
+                "id": 1,
+            },
         )
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
-        self.assertIn('msg', json_data)
+        self.assertIn("msg", json_data)
         # 验证数据库中已删除
         with test_app.app_context():
             tag = Tag.query.get(1)
@@ -155,8 +143,8 @@ class TestDeleteTag(unittest.TestCase):
         # setup
         with test_app.app_context():
             user = User(
-                email='2@foo.com',
-                password=generate_password_hash('password2'),
+                email="2@foo.com",
+                password=generate_password_hash("password2"),
             )
             db.session.add(user)
             db.session.commit()
@@ -166,28 +154,28 @@ class TestDeleteTag(unittest.TestCase):
         resp = client.post(
             self.url,
             json={
-                'id': 1,
-            }
+                "id": 1,
+            },
         )
         self.assertEqual(resp.status_code, 403)
         json_data = resp.get_json()
-        self.assertIn('error', json_data)
+        self.assertIn("error", json_data)
 
 
 class TestUpdateTag(unittest.TestCase):
-    url = '/api/tags/update'
+    url = "/api/tags/update"
 
     def setUp(self):
         with test_app.app_context():
             db.create_all()
             user = User(
-                email='1@foo.com',
-                password=generate_password_hash('password1'),
+                email="1@foo.com",
+                password=generate_password_hash("password1"),
             )
             img = Image(
-                data=b'abcdefggggggg',
-                type='jpeg',
-                tags=[Tag(text='aTag', user=user)],
+                data=b"abcdefggggggg",
+                type="jpeg",
+                tags=[Tag(text="aTag", user=user)],
             )
             user.images = [img]
             db.session.add(user)
@@ -199,40 +187,28 @@ class TestUpdateTag(unittest.TestCase):
 
     def test_normal(self):
         client = create_login_client(user_id=1)
-        resp = client.post(
-            self.url,
-            json={
-                'id': 1,
-                'text': 'updatedTag'
-            }
-        )
+        resp = client.post(self.url, json={"id": 1, "text": "updatedTag"})
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
-        self.assertIn('msg', json_data)
+        self.assertIn("msg", json_data)
         # 验证数据库中已修改
         with test_app.app_context():
             tag = Tag.query.get(1)
-            self.assertEqual(tag.text, 'updatedTag')
+            self.assertEqual(tag.text, "updatedTag")
 
     def test_update_other_users_tag(self):
         # setup
         with test_app.app_context():
             user = User(
-                email='2@foo.com',
-                password=generate_password_hash('password2'),
+                email="2@foo.com",
+                password=generate_password_hash("password2"),
             )
             db.session.add(user)
             db.session.commit()
 
         # test
         client = create_login_client(user_id=2)
-        resp = client.post(
-            self.url,
-            json={
-                'id': 1,
-                'text': 'updatedTag'
-            }
-        )
+        resp = client.post(self.url, json={"id": 1, "text": "updatedTag"})
         self.assertEqual(resp.status_code, 403)
         json_data = resp.get_json()
-        self.assertIn('error', json_data)
+        self.assertIn("error", json_data)
