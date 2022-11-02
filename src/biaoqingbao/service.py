@@ -4,12 +4,10 @@ from smtplib import SMTP_SSL
 from .configs import EMAIL_HOST, EMAIL_PASSWORD, EMAIL_USERNAME
 
 
-def send_email(to_addrs, subject, content):
+def send_email(to_addrs: str, subject: str, content: str) -> dict:
     """
     Params:
         to_addrs [str]: 多个则以英文逗号隔开
-        subject [str]
-        content [str]
     Return:
         errors [dict]: {'<recepient>': (<error_code>, <error_msg>), ...}
     Exception:

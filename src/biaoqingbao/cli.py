@@ -30,7 +30,7 @@ def drop_all():
 
 @cli.command("run")
 @click.option("--port", default=5000, help="Network port to listen to.")
-def run(port):
+def run(port: int):
     """Run biaoqingbao server."""
     app = create_app()
     serve(app, host="127.0.0.1", port=port)
