@@ -24,17 +24,11 @@
 ### 手动部署：
 
 ```bash
-$ python3 setup.py sdist
-# 需要先到服务器上创建好 /opt/www/biaoqingbao/ 目录
-$ scp dist/biaoqingbao-x.x.x.tar.gz <user>@<host>:/opt/www/biaoqingbao/
-$ scp env.sh.example <user>@<host>:/opt/www/biaoqingbao/env.sh
-$ scp gunicorn.conf.py run.sh <user>@<host>:/opt/www/biaoqingbao/
-
-$ ssh <user>@<host>
-$ cd /opt/www/biaoqingbao
+$ git clone https://github.com/valleygtc/biaoqingbao.git
+$ cd biaoqingbao
 $ python3 -m venv .venv
 $ . .venv/bin/activate
-$ pip install biaoqingbao-x.x.x.tar.gz[deploy]
+$ poetry install --with prod
 
 $ vi env.sh # 填写好程序运行所需环境变量。
 $ source env.sh
