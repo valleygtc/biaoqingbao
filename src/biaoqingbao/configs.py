@@ -8,7 +8,7 @@ import os
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URI")
 assert SQLALCHEMY_DATABASE_URI
-SECRET_KEY = os.getenv("SECRET_KEY").encode("utf-8")
+SECRET_KEY = os.getenv("SECRET_KEY")
 assert SECRET_KEY
 
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtpdm.aliyun.com")
