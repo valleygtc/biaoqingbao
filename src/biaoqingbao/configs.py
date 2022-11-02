@@ -1,17 +1,19 @@
-import os
+from pydantic import BaseSettings, Field, PostgresDsn
 
-# DEBUG = True if os.getenv('DEBUG') in ('True', 'true', '1') else False
-# SQLALCHEMY_ECHO = True
 
-# TESTING = True if os.getenv('TESTING') in ('True', 'true', '1') else False
+class Configs(BaseSettings):
+    # DEBUG = True if os.getenv('DEBUG') in ('True', 'true', '1') else False
+    # SQLALCHEMY_ECHO = True
 
-SQLALCHEMY_TRACK_MODIFICATIONS = False
-SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URI")
-assert SQLALCHEMY_DATABASE_URI
-SECRET_KEY = os.getenv("SECRET_KEY")
-assert SECRET_KEY
+    # TESTING = True if os.getenv('TESTING') in ('True', 'true', '1') else False
 
-EMAIL_HOST = os.getenv("EMAIL_HOST", "smtpdm.aliyun.com")
-EMAIL_USERNAME = os.getenv("EMAIL_USERNAME", "admin@notice.bqb.plus")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
-assert EMAIL_PASSWORD
+    SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
+    SQLALCHEMY_DATABASE_URI: PostgresDsn = Field(..., env="DATABASE_URI")
+    SECRET_KEY: str
+
+    EMAIL_HOST: str = "smtpdm.aliyun.com"
+    EMAIL_USERNAME: str = "admin@notice.bqb.plus"
+    EMAIL_PASSWORD: str
+
+
+configs = Configs()
