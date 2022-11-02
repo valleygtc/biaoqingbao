@@ -1,6 +1,4 @@
-import json
 import unittest
-from io import BytesIO
 
 from werkzeug.security import generate_password_hash
 

@@ -22,7 +22,7 @@ def send_email(to_addrs, subject, content):
     email.set_content(content)
 
     TIMEOUT = 2
-    with SMTP_SSL("smtpdm.aliyun.com", timeout=TIMEOUT) as client:
+    with SMTP_SSL(EMAIL_HOST, timeout=TIMEOUT) as client:
         client.login(EMAIL_USERNAME, EMAIL_PASSWORD)
         errors = client.send_message(email)
 

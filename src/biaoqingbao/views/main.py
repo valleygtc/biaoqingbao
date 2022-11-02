@@ -2,12 +2,11 @@ import io
 import zipfile
 from uuid import uuid4
 
-from flask import Blueprint, Response, json, jsonify, request, send_file, session
-from werkzeug.security import check_password_hash, generate_password_hash
+from flask import Blueprint, Response, json, jsonify, request, send_file
 
 from .. import db
 from ..auth import decode_token
-from ..models import Group, Image, Tag, User
+from ..models import Group, Image, Tag
 
 bp_main = Blueprint("bp_main", __name__)
 
