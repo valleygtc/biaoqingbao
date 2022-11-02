@@ -16,6 +16,7 @@ flask-sqlalchemy = "^3.0.2"
 psycopg2 = "^2.9.5"
 pyjwt = "^2.6.0"
 waitress = "^2.1.2"
+pydantic = "^1.10.2"
 
 [[tool.poetry.source]]
 name = "tsinghua"
