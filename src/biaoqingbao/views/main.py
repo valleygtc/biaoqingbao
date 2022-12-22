@@ -379,8 +379,19 @@ def show_groups():
         .order_by(Group.create_at)
         .all()
     )
+    image_total = Image.query.filter_by(user_id=request.session["user_id"]).count()
+    data = [
+        {
+            "id": None,
+            "name": "全部",
+            "image_number": image_total,
+        }
+    ]
+    for r in groups:
+        data.append({"id": r.id, "name": r.name, "image_number": len(r.images)})
+
     resp = {
-        "data": [{"id": r.id, "name": r.name} for r in groups],
+        "data": data,
     }
     return jsonify(resp)
 
