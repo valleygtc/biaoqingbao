@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pyinfra.operations import files, init, server
+from pyinfra.operations import files, server, systemd
 
 filename = input("input builded tar.gz filename: ")
 filepath = Path(f"../dist/{filename}").resolve()
@@ -30,10 +30,12 @@ server.shell(
     chdir=repo_dir,
 )
 
-init.systemd(
+systemd.service(
     name="Restart biaoqingbao.service",
     service="biaoqingbao",
+    running=True,
     restarted=True,
+    enabled=True,
 )
 
 server.wait(
