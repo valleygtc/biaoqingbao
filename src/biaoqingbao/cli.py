@@ -1,7 +1,7 @@
 import click
 from waitress import serve
 
-from .create_app import create_app
+from .factory import create_app
 from .models import db
 from .version import __version__
 
