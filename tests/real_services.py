@@ -1,6 +1,6 @@
 import unittest
 
-from biaoqingbao.service import send_email
+from biaoqingbao.services import send_email
 
 
 class TestShowImageList(unittest.TestCase):

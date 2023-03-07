@@ -7,7 +7,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from .. import db
 from ..auth import generate_token
 from ..models import Passcode, ResetAttempt, User
-from ..service import send_email
+from ..services import send_email
 from ..utils import generate_passcode
 
 bp_user = Blueprint("bp_user", __name__)
