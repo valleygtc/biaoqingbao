@@ -39,7 +39,7 @@ class TestShowGroups(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
         self.assertIn("data", json_data)
-        self.assertEqual(len(json_data["data"]), 4)
+        self.assertEqual(len(json_data["data"]), 5)
 
 
 class TestAddGroup(unittest.TestCase):

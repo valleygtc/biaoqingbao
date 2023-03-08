@@ -43,6 +43,7 @@ class Image(db.Model):
     user = db.relationship(
         User, lazy=True, backref=db.backref("images", lazy=True, cascade="all,delete")
     )
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
     create_at = db.Column(db.DateTime(), nullable=False, server_default=func.now())
 
     def readyToJSON(self, keys, datetime_format):

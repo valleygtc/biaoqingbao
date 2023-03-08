@@ -1,5 +1,6 @@
 import io
 import zipfile
+from typing import Tuple
 from uuid import uuid4
 
 from flask import Blueprint, Response, json, jsonify, request, send_file
@@ -9,6 +10,8 @@ from ..auth import decode_token
 from ..models import Group, Image, Tag
 
 bp_main = Blueprint("bp_main", __name__)
+
+RECYCLE_BIN_GROUP_ID = -1
 
 
 @bp_main.before_request
@@ -71,20 +74,16 @@ def show_images():
     query = Image.query.filter_by(user_id=user_id)
 
     # apply search
-    groupId = request.args.get("groupId")
+    group_id = request.args.get("groupId")
     tag = request.args.get("tag")
-    if groupId and tag:
-        query = (
-            query.join(Image.group)
-            .join(Image.tags)
-            .filter(Group.id == groupId)
-            .filter(Tag.text.contains(tag))
-        )
-    elif groupId:
-        query = query.join(Image.group).filter(Group.id == groupId)
-    elif tag:
-        query = query.join(Image.tags).filter(Tag.text.contains(tag))
+    if group_id:
+        group_id = int(group_id)
+        query = apply_image_group_search(query, group_id)
+    else:
+        query = query.filter(Image.is_deleted == False)
 
+    if tag:
+        query = apply_image_tag_search(query, tag)
     # apply pagination, order
     DEFAULT_PER_PAGE = 20
     page = int(request.args.get("page", default=1))
@@ -100,6 +99,7 @@ def show_images():
             "type": record.type,
             "tags": [{"id": t.id, "text": t.text} for t in record.tags],
             "group_id": record.group_id,
+            "is_deleted": record.is_deleted,
         }
         for record in paginate.items
     ]
@@ -113,6 +113,25 @@ def show_images():
         },
     }
     return jsonify(resp)
+
+
+def apply_image_group_search(query, group_id: int):
+    if is_recycle_bin(group_id):
+        return query.filter(Image.is_deleted == True)
+    else:
+        return (
+            query.join(Image.group)
+            .filter(Group.id == group_id)
+            .filter(Image.is_deleted == False)
+        )
+
+
+def apply_image_tag_search(query, tag: str):
+    return query.join(Image.tags).filter(Tag.text.contains(tag))
+
+
+def is_recycle_bin(group_id: int) -> bool:
+    return group_id == RECYCLE_BIN_GROUP_ID
 
 
 """
@@ -211,9 +230,108 @@ def delete_image():
             403,
         )
     else:
+        image.is_deleted = True
+        db.session.commit()
+        return jsonify({"msg": "图片已移至回收站"})
+
+
+"""
+POST {
+    "id": [Number]
+}
+resp: 200, body: {"msg": [String]}
+"""
+
+
+@bp_main.route("/api/images/permanentDelete", methods=["POST"])
+def permanent_delete_image():
+    data = request.get_json()
+    image_id = data["id"]
+    image = Image.query.get(image_id)
+    if image is None:
+        return (
+            jsonify(
+                {
+                    "error": "所选图片不存在，请刷新页面",
+                }
+            ),
+            404,
+        )
+    elif image.user_id != request.session["user_id"]:
+        return (
+            jsonify(
+                {
+                    "error": "您没有删除此图片的权限",
+                }
+            ),
+            403,
+        )
+    else:
         db.session.delete(image)
         db.session.commit()
         return jsonify({"msg": "成功删除图片"})
+
+
+"""
+POST {
+    "id": [Number]
+}
+resp: 200, body: {"msg": [String]}
+"""
+
+
+@bp_main.route("/api/images/restore", methods=["POST"])
+def restore_image():
+    data = request.get_json()
+    image_id = data["id"]
+    image = Image.query.get(image_id)
+    if image is None:
+        return (
+            jsonify(
+                {
+                    "error": "所选图片不存在，请刷新页面",
+                }
+            ),
+            404,
+        )
+    elif image.user_id != request.session["user_id"]:
+        return (
+            jsonify(
+                {
+                    "error": "您没有删除此图片的权限",
+                }
+            ),
+            403,
+        )
+    else:
+        image.is_deleted = False
+        db.session.commit()
+        return jsonify({"msg": "图片已恢复"})
+
+
+"""
+POST {}
+resp: 200, body: {"msg": [String]}
+"""
+
+
+@bp_main.route("/api/clearRecycleBin", methods=["POST"])
+def clear_recycle_bin():
+    user_id = request.session["user_id"]
+    image_ids = get_image_ids_in_recycle_bin(user_id)
+    Tag.query.filter(Tag.image_id.in_(image_ids)).delete()
+    Image.query.filter_by(user_id=user_id, is_deleted=True).delete()
+    db.session.commit()
+    return jsonify({"msg": "回收站已清空"})
+
+
+def get_image_ids_in_recycle_bin(user_id: int) -> Tuple[int]:
+    images = (
+        Image.query.filter_by(user_id=user_id, is_deleted=True)
+        .with_entities(Image.id)
+        .all()
+    )
+    return (image[0] for image in images)
 
 
 """
@@ -375,17 +493,23 @@ resp: 200, body:
 @bp_main.route("/api/groups/")
 def show_groups():
     user_id = request.session["user_id"]
-    image_total = Image.query.filter_by(user_id=user_id).count()
+    image_total = Image.query.filter_by(user_id=user_id, is_deleted=False).count()
+    deleted_image_num = Image.query.filter_by(user_id=user_id, is_deleted=True).count()
     data = [
         {
             "id": None,
             "name": "全部",
             "image_number": image_total,
-        }
+        },
+        {
+            "id": RECYCLE_BIN_GROUP_ID,
+            "name": "回收站",
+            "image_number": deleted_image_num,
+        },
     ]
     groups = Group.query.filter_by(user_id=user_id).order_by(Group.create_at).all()
     for _g in groups:
-        image_number = Image.query.filter_by(group=_g).count()
+        image_number = Image.query.filter_by(group=_g, is_deleted=False).count()
         data.append({"id": _g.id, "name": _g.name, "image_number": image_number})
 
     resp = {

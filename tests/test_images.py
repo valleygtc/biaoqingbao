@@ -25,6 +25,15 @@ class TestShowImageList(unittest.TestCase):
                     tags=[Tag(text="aTag", user=user), Tag(text="bTag", user=user)],
                 )
                 user.images.append(img)
+
+            deleted_image_with_tag = Image(
+                data=b"fake binary data",
+                type="jpeg",
+                tags=[Tag(text="dTag", user=user)],
+                user=user,
+                is_deleted=True,
+            )
+            user.images.append(deleted_image_with_tag)
             db.session.add(user)
             db.session.commit()
 
@@ -38,6 +47,7 @@ class TestShowImageList(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
         self.assertIn("data", json_data)
+        self.assertEqual(json_data["pagination"]["total"], 20)
 
     def test_pagination(self):
         client = create_login_client(user_id=1)
@@ -92,6 +102,21 @@ class TestSearchImage(unittest.TestCase):
                 user=user,
             )
             db.session.add(img3)
+            deleted_image_with_tag = Image(
+                data=b"fake binary data",
+                type="jpeg",
+                tags=[Tag(text="dTag", user=user)],
+                user=user,
+                is_deleted=True,
+            )
+            deleted_image_without_tag = Image(
+                data=b"fake binary data",
+                type="jpeg",
+                user=user,
+                is_deleted=True,
+            )
+            db.session.add(deleted_image_with_tag)
+            db.session.add(deleted_image_without_tag)
             db.session.commit()
 
     def tearDown(self):
@@ -131,6 +156,22 @@ class TestSearchImage(unittest.TestCase):
                 "tag": "aTag",
             },
         )
+        self.assertEqual(resp.status_code, 200)
+        json_data = resp.get_json()
+        self.assertIn("data", json_data)
+        self.assertEqual(len(json_data["data"]), 1)
+
+    def test_show_recycle_bin(self):
+        client = create_login_client(user_id=1)
+        resp = client.get(self.url, query_string={"groupId": -1})
+        self.assertEqual(resp.status_code, 200)
+        json_data = resp.get_json()
+        self.assertIn("data", json_data)
+        self.assertEqual(len(json_data["data"]), 2)
+
+    def test_search_in_recycle_bin(self):
+        client = create_login_client(user_id=1)
+        resp = client.get(self.url, query_string={"groupId": -1, "tag": "dTa"})
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
         self.assertIn("data", json_data)
@@ -346,9 +387,121 @@ class TestDeleteImage(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         json_data = resp.get_json()
         self.assertIn("msg", json_data)
-        # 验证数据库中已删除
+        with test_app.app_context():
+            self.assertTrue(Image.query.get(1).is_deleted)
+
+    def test_delete_not_exists_image(self):
+        client = create_login_client(user_id=1)
+        resp = client.post(self.url, json={"id": 10000})
+        self.assertEqual(resp.status_code, 404)
+        json_data = resp.get_json()
+        self.assertIn("error", json_data)
+
+    def test_delete_other_users_image(self):
+        # setup
+        with test_app.app_context():
+            user = User(
+                email="2@foo.com",
+                password=generate_password_hash("password1"),
+            )
+            db.session.add(user)
+            db.session.commit()
+
+        client = create_login_client(user_id=2)
+        resp = client.post(self.url, json={"id": 1})
+        self.assertEqual(resp.status_code, 403)
+        json_data = resp.get_json()
+        self.assertIn("error", json_data)
+
+
+class TestPermanentDeleteImage(unittest.TestCase):
+    url = "/api/images/permanentDelete"
+
+    def setUp(self):
+        with test_app.app_context():
+            db.create_all()
+            user = User(
+                email="1@foo.com",
+                password=generate_password_hash("password1"),
+            )
+            img = Image(
+                data=b"fake binary data",
+                type="jpeg",
+                tags=[Tag(text="aTag", user=user)],
+            )
+            user.images.append(img)
+            db.session.add(user)
+            db.session.commit()
+
+    def tearDown(self):
+        with test_app.app_context():
+            db.drop_all()
+
+    def test_normal(self):
+        client = create_login_client(user_id=1)
+        resp = client.post(self.url, json={"id": 1})
+        self.assertEqual(resp.status_code, 200)
+        json_data = resp.get_json()
+        self.assertIn("msg", json_data)
         with test_app.app_context():
             self.assertFalse(Image.query.get(1))
+
+    def test_delete_not_exists_image(self):
+        client = create_login_client(user_id=1)
+        resp = client.post(self.url, json={"id": 10000})
+        self.assertEqual(resp.status_code, 404)
+        json_data = resp.get_json()
+        self.assertIn("error", json_data)
+
+    def test_delete_other_users_image(self):
+        # setup
+        with test_app.app_context():
+            user = User(
+                email="2@foo.com",
+                password=generate_password_hash("password1"),
+            )
+            db.session.add(user)
+            db.session.commit()
+
+        client = create_login_client(user_id=2)
+        resp = client.post(self.url, json={"id": 1})
+        self.assertEqual(resp.status_code, 403)
+        json_data = resp.get_json()
+        self.assertIn("error", json_data)
+
+
+class TestRestoreImage(unittest.TestCase):
+    url = "/api/images/restore"
+
+    def setUp(self):
+        with test_app.app_context():
+            db.create_all()
+            user = User(
+                email="1@foo.com",
+                password=generate_password_hash("password1"),
+            )
+            img = Image(
+                data=b"fake binary data",
+                type="jpeg",
+                tags=[Tag(text="aTag", user=user)],
+                is_deleted=True,
+            )
+            user.images.append(img)
+            db.session.add(user)
+            db.session.commit()
+
+    def tearDown(self):
+        with test_app.app_context():
+            db.drop_all()
+
+    def test_normal(self):
+        client = create_login_client(user_id=1)
+        resp = client.post(self.url, json={"id": 1})
+        self.assertEqual(resp.status_code, 200)
+        json_data = resp.get_json()
+        self.assertIn("msg", json_data)
+        with test_app.app_context():
+            self.assertFalse(Image.query.get(1).is_deleted)
 
     def test_delete_not_exists_image(self):
         client = create_login_client(user_id=1)
@@ -581,3 +734,51 @@ class TestExportImages(unittest.TestCase):
             },
         )
         self.assertEqual(resp.status_code, 200)
+
+
+class TestClearRecycleBin(unittest.TestCase):
+    url = "/api/clearRecycleBin"
+
+    def setUp(self):
+        with test_app.app_context():
+            db.create_all()
+            user = User(
+                email="1@foo.com",
+                password=generate_password_hash("password1"),
+            )
+            for _ in range(2):
+                img = Image(
+                    data=b"fake binary data",
+                    type="jpeg",
+                    tags=[Tag(text="aTag", user=user), Tag(text="bTag", user=user)],
+                )
+                user.images.append(img)
+
+            deleted_image_with_tag = Image(
+                data=b"fake binary data",
+                type="jpeg",
+                tags=[Tag(text="dTag", user=user)],
+                user=user,
+                is_deleted=True,
+            )
+            user.images.append(deleted_image_with_tag)
+            db.session.add(user)
+            db.session.commit()
+
+    def tearDown(self):
+        with test_app.app_context():
+            db.drop_all()
+
+    def test_default(self):
+        client = create_login_client(user_id=1)
+        resp = client.post(self.url, data={})
+        self.assertEqual(resp.status_code, 200)
+        json_data = resp.get_json()
+        self.assertIn("msg", json_data)
+        with test_app.app_context():
+            deleted_images = Image.query.filter_by(is_deleted=True).all()
+            self.assertEqual(deleted_images, [])
+            last_images = Image.query.filter_by(is_deleted=False).all()
+            self.assertEqual(len(last_images), 2)
+            tags = Tag.query.filter_by(text="dTag").all()
+            self.assertEqual(tags, [])
