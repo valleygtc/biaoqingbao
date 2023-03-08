@@ -374,12 +374,8 @@ resp: 200, body:
 
 @bp_main.route("/api/groups/")
 def show_groups():
-    groups = (
-        Group.query.filter_by(user_id=request.session["user_id"])
-        .order_by(Group.create_at)
-        .all()
-    )
-    image_total = Image.query.filter_by(user_id=request.session["user_id"]).count()
+    user_id = request.session["user_id"]
+    image_total = Image.query.filter_by(user_id=user_id).count()
     data = [
         {
             "id": None,
@@ -387,8 +383,10 @@ def show_groups():
             "image_number": image_total,
         }
     ]
-    for r in groups:
-        data.append({"id": r.id, "name": r.name, "image_number": len(r.images)})
+    groups = Group.query.filter_by(user_id=user_id).order_by(Group.create_at).all()
+    for _g in groups:
+        image_number = Image.query.filter_by(group=_g).count()
+        data.append({"id": _g.id, "name": _g.name, "image_number": image_number})
 
     resp = {
         "data": data,
